@@ -29,8 +29,7 @@ const Index = () => {
         style={{ width: '100%', height: '100%' }}
       />
       
-      {/* Sparkle background effects */}
-      <SparkleBackground />
+
       
       {/* Bottom center glow effect */}
       <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[500px] h-[350px] bg-gradient-to-t from-white/20 via-white/10 to-transparent blur-3xl opacity-80 pointer-events-none z-10"></div>
