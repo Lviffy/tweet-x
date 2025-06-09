@@ -26,7 +26,7 @@ const HeroSection = () => {
           </h1>
 
           {/* Description */}
-          <p className="text-md text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
+          <p className="text-sm text-muted-foreground max-w-3xl mx-auto  font-normal">
             Welcome to PromptVerse. Effortlessly create content, explore endless prompts, and stay ahead with 
             real-time trends. Automate emails, social media, and more while our AI extracts knowledge from any 
             document or URL. Experience a stunning, futuristic design that boosts productivity.
@@ -36,17 +36,12 @@ const HeroSection = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
             <Button 
               size="lg" 
-              className="px-8 py-6 text-lg bg-transparent border border-foreground/20 hover:bg-foreground/10 transition-all duration-300 group"
+              className="px-8 py-6 text-lg bg-transparent border border-foreground hover:bg-foreground/50 transition-all duration-300 group text-white "
             >
-              <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+              <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform text-white" />
               Start Generating
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="px-8 py-6 text-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300"
-            >
-              <Download className="w-5 h-5 mr-2" />
+          <Button className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition">
               Download
             </Button>
           </div>
