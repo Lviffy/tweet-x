@@ -9,6 +9,9 @@ const Index = () => {
       {/* Sparkle background effects */}
       <SparkleBackground />
       
+      {/* Bottom center glow effect */}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-96 h-48 bg-gradient-to-t from-white/20 via-white/10 to-transparent blur-3xl opacity-60 pointer-events-none"></div>
+      
       {/* Header */}
       <Header />
       
