@@ -13,7 +13,7 @@ const HeroSection = () => {
           </div>
 
           {/* Main heading */}
-          <h1 className="text-5xl md:text-7xl font-semibold leading-tight">
+          <h1 className="text-5xl md:text-6xl font-semibold leading-tight">
             Find Inspiration.
             <br />
             <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
