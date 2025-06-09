@@ -36,7 +36,7 @@ const HeroSection = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
            
 
-            <Button className=" flex items-center gap-2 rounded-full bg-transparent text-white font-medium px-6 py-2 hover:bg-gray-100 transition">
+            <Button className=" flex items-center gap-2 rounded-full bg-transparent text-white font-medium px-6 py-2 hover:bg-gray-100 transition border border-white ">
                  <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform text-white" />
               Start Generating
             </Button>
