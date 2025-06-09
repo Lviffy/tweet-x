@@ -13,7 +13,7 @@ const HeroSection = () => {
           </div>
 
           {/* Main heading */}
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight">
+          <h1 className="text-5xl md:text-7xl font-semibold leading-tight">
             Find Inspiration.
             <br />
             <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
@@ -26,7 +26,7 @@ const HeroSection = () => {
           </h1>
 
           {/* Description */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          <p className="text-md text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
             Welcome to PromptVerse. Effortlessly create content, explore endless prompts, and stay ahead with 
             real-time trends. Automate emails, social media, and more while our AI extracts knowledge from any 
             document or URL. Experience a stunning, futuristic design that boosts productivity.
