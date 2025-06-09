@@ -8,9 +8,7 @@ const HeroSection = () => {
       <div className="container mx-auto text-center">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Brand name */}
-          <div className="text-muted-foreground text-lg font-medium">
-            Promptverse AI
-          </div>
+      
 
           {/* Main heading */}
           <h1 className="text-5xl md:text-6xl font-semibold leading-tight">
