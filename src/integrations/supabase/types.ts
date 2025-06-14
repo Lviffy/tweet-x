@@ -44,6 +44,66 @@ export type Database = {
           },
         ]
       }
+      scraped_profiles: {
+        Row: {
+          avatar_url: string | null
+          average_tweet_length: number | null
+          bio: string | null
+          common_phrases: string[] | null
+          created_at: string | null
+          display_name: string | null
+          emoji_usage: number | null
+          handle: string
+          id: string
+          last_scraped_at: string | null
+          thread_percentage: number | null
+          topic_areas: string[] | null
+          tweet_sample_count: number | null
+          updated_at: string | null
+          user_id: string
+          verified: boolean | null
+          writing_style_json: Json | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          average_tweet_length?: number | null
+          bio?: string | null
+          common_phrases?: string[] | null
+          created_at?: string | null
+          display_name?: string | null
+          emoji_usage?: number | null
+          handle: string
+          id?: string
+          last_scraped_at?: string | null
+          thread_percentage?: number | null
+          topic_areas?: string[] | null
+          tweet_sample_count?: number | null
+          updated_at?: string | null
+          user_id: string
+          verified?: boolean | null
+          writing_style_json?: Json | null
+        }
+        Update: {
+          avatar_url?: string | null
+          average_tweet_length?: number | null
+          bio?: string | null
+          common_phrases?: string[] | null
+          created_at?: string | null
+          display_name?: string | null
+          emoji_usage?: number | null
+          handle?: string
+          id?: string
+          last_scraped_at?: string | null
+          thread_percentage?: number | null
+          topic_areas?: string[] | null
+          tweet_sample_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+          verified?: boolean | null
+          writing_style_json?: Json | null
+        }
+        Relationships: []
+      }
       tweet_sessions: {
         Row: {
           created_at: string
