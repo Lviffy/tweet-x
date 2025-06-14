@@ -1,6 +1,7 @@
 // Add debug log and error boundary to catch render errors
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,7 @@ interface GeneratedTweet {
 }
 
 const TweetGenerator = () => {
+  const navigate = useNavigate();
   const [handles, setHandles] = useState<string[]>(['']);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
@@ -146,6 +148,12 @@ const TweetGenerator = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-gray-900/20 relative overflow-hidden">
       <div className="container mx-auto px-6 py-12">
+        {/* Go Home Button */}
+        <div className="mb-6">
+          <Button variant="outline" onClick={() => navigate("/")}>
+            Go Home
+          </Button>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
