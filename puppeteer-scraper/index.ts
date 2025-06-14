@@ -2,7 +2,7 @@
 // Minimal Node.js Express + Puppeteer API for Twitter/X profile scraping
 // Deploy on Render/Railway/Vercel/Fly.io, etc.
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
 
@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-app.post('/scrape-twitter-profile', async (req, res) => {
+app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
   let browser;
   try {
     if (API_KEY && req.headers['x-api-key'] !== API_KEY) {
@@ -57,8 +57,8 @@ app.post('/scrape-twitter-profile', async (req, res) => {
 
     console.log('Page loaded, waiting for content...');
 
-    // Wait for content to load
-    await page.waitForTimeout(3000);
+    // Wait for content to load - using setTimeout instead of waitForTimeout
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Get some tweets with error handling
     const tweets = await page.$$eval('div[data-testid="tweetText"] span', spans => 
@@ -109,14 +109,14 @@ app.post('/scrape-twitter-profile', async (req, res) => {
     console.log('Scraping completed successfully');
     return res.json(result);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Puppeteer scraping error:', error.message);
     
     // Clean up browser if it exists
     if (browser) {
       try {
         await browser.close();
-      } catch (closeError) {
+      } catch (closeError: any) {
         console.error('Error closing browser:', closeError.message);
       }
     }
@@ -129,7 +129,7 @@ app.post('/scrape-twitter-profile', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.json({ 
     status: 'healthy', 
     service: 'puppeteer-scraper',
@@ -137,7 +137,7 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ 
     status: 'healthy',
     uptime: process.uptime(),
