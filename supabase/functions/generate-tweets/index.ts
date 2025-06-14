@@ -1,282 +1,308 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = await req.json()
-    
-    const authHeader = req.headers.get('Authorization')!
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const { 
+      handles, 
+      topic, 
+      tone, 
+      format, 
+      tweetCount, 
+      includeHashtags, 
+      includeEmojis, 
+      includeCTA 
+    } = await req.json();
 
-    // Get user from auth header
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('Generate tweets request:', { handles, topic, tone, format, tweetCount });
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get JWT token from request
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify user
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
     if (userError || !user) {
-      throw new Error('Unauthorized')
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Check if Gemini API key is available
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!geminiApiKey) {
-      throw new Error('Gemini API key not configured')
-    }
-
-    // Build the prompt based on parameters
-    let stylePrompt = ""
-    if (handles && handles.length > 0) {
-      stylePrompt = `Analyze and mimic the writing style, tone, and engagement patterns of ${handles.join(', ')}. Study their viral content patterns.`
-    }
-
-    let formatPrompt = ""
-    if (format === 'single') {
-      formatPrompt = "Create single tweets (max 280 characters each) optimized for maximum engagement."
-    } else if (format.startsWith('thread')) {
-      const threadLength = format.split('-')[1]
-      formatPrompt = `Create ${threadLength}-tweet threads. Start each thread with a compelling hook in the first tweet. Number each tweet (1/${threadLength}, 2/${threadLength}, etc.). Each tweet should build narrative tension and provide value. Separate tweets in a thread with "---" on its own line.`
-    }
-
-    let optionsPrompt = ""
-    const options = []
-    if (includeHashtags) options.push("include 2-3 strategic hashtags that trend or have high engagement")
-    if (includeEmojis) options.push("include 1-2 relevant emojis that enhance readability and emotion")
-    if (includeCTA) options.push("include a compelling call-to-action that drives engagement")
-    if (options.length > 0) {
-      optionsPrompt = `Make sure to ${options.join(', ')}.`
-    }
-
-    const toneMap = {
-      'build-in-public': 'Build-in-public tone - vulnerable, authentic, behind-the-scenes insights that people rarely share. Include specific numbers, failures, and lessons.',
-      'fundraising': 'Professional fundraising tone - confident but not arrogant, data-driven with compelling narrative, investor-focused with clear value proposition.',
-      'inspirational': 'Inspirational tone - motivational but not preachy, includes personal anecdotes, actionable advice, and relatable struggles.',
-      'technical': 'Technical deep-dive tone - educational but accessible, includes code snippets or technical insights, appeals to developers and tech enthusiasts.',
-      'funny': 'Humorous tone - witty observations, relatable tech humor, meme-worthy content, clever wordplay, timing-based comedy.'
-    }
-
-    const viralStrategies = `
-VIRAL TWEET STRATEGIES:
-1. Hook: Start with attention-grabbing opening (controversial take, shocking stat, bold prediction)
-2. Emotion: Trigger strong emotions (surprise, anger, joy, fear, curiosity)
-3. Relatability: Address common pain points or shared experiences
-4. Storytelling: Use narrative structure with conflict and resolution
-5. Specificity: Use concrete details, numbers, and examples
-6. Controversy: Take a contrarian stance (but not offensive)
-7. Value: Provide actionable insights or useful information
-8. Urgency: Create time-sensitive or trending content
-9. Social Proof: Reference success stories or popular opinions
-10. Curiosity Gap: Tease information that makes people want to engage
-
-ENGAGEMENT TACTICS:
-- Ask thought-provoking questions
-- Use line breaks for visual appeal and readability
-- Include personal anecdotes or behind-the-scenes moments
-- Reference current events or trending topics
-- Use power words: "revealed", "secret", "mistake", "truth", "exposed"
-- Create shareable quotes or one-liners
-- Challenge conventional wisdom
-- Share counter-intuitive insights
-`
-
-    const prompt = `You are a viral content specialist and social media expert. Create highly engaging, shareable tweets that maximize reach and engagement.
-
-${stylePrompt} ${formatPrompt} ${optionsPrompt}
-
-Topic: ${topic}
-Tone: ${toneMap[tone] || tone}
-
-${viralStrategies}
-
-CONTENT REQUIREMENTS:
-- Each tweet/thread must have viral potential with high engagement probability
-- Use psychological triggers that make people want to share
-- Include specific, concrete details rather than generic statements
-- Create content that sparks discussion and replies
-- Use formatting that enhances readability (line breaks, emphasis)
-- Ensure content is valuable, entertaining, or thought-provoking
-- Avoid generic advice - be specific and actionable
-
-Generate exactly ${tweetCount} different high-quality variations. Each should use different viral strategies and engagement tactics.
-
-CRITICAL FORMATTING RULES:
-- Do NOT include any labels like "Variation 1:", "Tweet 1:", "Option A:", etc.
-- Do NOT include explanatory text or commentary
-- Return ONLY the tweet content
-- For single tweets: Separate each variation with exactly three newlines (\n\n\n)
-- For threads: Separate tweets within a thread with "---" on its own line, and separate thread variations with exactly three newlines (\n\n\n)
-- Make each variation distinctly different in approach and style
-
-Example format for single tweets:
-First viral tweet with strong hook and emotional trigger.
-
-Second viral tweet with different angle and curiosity gap.
-
-Third viral tweet with contrarian take and social proof.
-
-Example format for threads:
-First thread hook tweet 1/3
----
-Second tweet building tension 2/3
----
-Third tweet with payoff 3/3
-
-
-Second thread with different hook 1/3
----
-Different approach middle tweet 2/3
----
-Different conclusion 3/3`
-
-    console.log(`Calling Gemini API to generate ${tweetCount} viral tweets`)
-
-    // Call Gemini API with enhanced configuration
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 4000,
-          candidateCount: 1
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      }),
-    })
-
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.text()
-      console.error('Gemini API error:', errorData)
-      throw new Error('Failed to generate viral tweets with Gemini AI')
-    }
-
-    const geminiData = await geminiResponse.json()
-    console.log('Gemini response received')
-
-    if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content) {
-      console.error('Invalid Gemini response structure:', geminiData)
-      throw new Error('Invalid response from Gemini AI')
-    }
-
-    const generatedContent = geminiData.candidates[0].content.parts[0].text
-    console.log('Raw generated content:', generatedContent)
-
-    // Enhanced content parsing for both single tweets and threads
-    let tweets = []
+    // Fetch scraped profile data for the selected handles
+    const profileData = await getProfileAnalysis(supabase, user.id, handles);
     
-    if (format === 'single') {
-      // For single tweets, split by triple newlines
-      const variations = generatedContent
-        .split(/\n\s*\n\s*\n/)
-        .map(v => v.trim())
-        .filter(v => v.length > 10 && !v.toLowerCase().includes('variation') && !v.toLowerCase().includes('example'))
-        .slice(0, tweetCount)
-      
-      tweets = variations.map((content, index) => ({
-        id: crypto.randomUUID(),
-        content: content,
-        type: 'single' as const
-      }))
-    } else {
-      // For threads, split by triple newlines to get thread variations
-      const threadVariations = generatedContent
-        .split(/\n\s*\n\s*\n/)
-        .map(v => v.trim())
-        .filter(v => v.length > 10)
-        .slice(0, tweetCount)
-      
-      // Process each thread variation
-      threadVariations.forEach((threadContent, threadIndex) => {
-        const threadTweets = threadContent
-          .split(/\n---\n|\n--\n/)
-          .map(tweet => tweet.trim())
-          .filter(tweet => tweet.length > 5)
-        
-        // Add each tweet in the thread
-        threadTweets.forEach((tweetContent, tweetIndex) => {
-          tweets.push({
-            id: crypto.randomUUID(),
-            content: tweetContent,
-            type: 'thread' as const
-          })
-        })
-      })
+    // Generate AI prompt with enhanced context
+    const prompt = createEnhancedPrompt({
+      handles,
+      topic,
+      tone,
+      format,
+      tweetCount,
+      includeHashtags,
+      includeEmojis,
+      includeCTA,
+      profileData
+    });
+
+    console.log('Enhanced AI prompt created with profile analysis');
+
+    // Call Gemini AI
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
-    console.log(`Successfully parsed ${tweets.length} tweets from ${tweetCount} requested variations`)
-
-    // Fallback if parsing fails
-    if (tweets.length === 0) {
-      console.log('Parsing failed, using fallback content')
-      const fallbackTemplates = [
-        `🚀 Just shipped a new feature that took 6 months to build.\n\nTurns out users needed something completely different.\n\nBuilding in public teaches you humility real quick.`,
-        `The biggest mistake I made as a founder:\n\nListening to everyone's advice.\n\nSometimes you need to trust your gut and ignore the noise.`,
-        `Plot twist: The feature everyone said was "too simple" is now our most used.\n\nComplexity is the enemy of adoption.\n\nKeep it simple, keep it useful.`,
-        `Harsh truth: Your product isn't failing because of features.\n\nIt's failing because you haven't found product-market fit.\n\nStop building, start listening.`,
-        `Raised $1M, burned it in 8 months.\n\nLesson learned: Revenue > Funding.\n\nBootstrap mindset even when you have money.`,
-        `3 years of "overnight success":\n\n• 47 failed prototypes\n• 12 pivots\n• 1 breakthrough\n\nSuccess is just failure with persistence.`,
-        `Your competition isn't other startups.\n\nIt's the status quo.\n\nMost people prefer broken familiar over perfect unknown.`,
-        `Technical debt is like credit card debt.\n\nFeels great at first.\n\nThen it compounds and kills you.`
-      ]
-      
-      tweets = fallbackTemplates.slice(0, tweetCount).map((content, index) => ({
-        id: crypto.randomUUID(),
-        content: content,
-        type: format.startsWith('thread') ? 'thread' as const : 'single' as const
-      }))
-    }
-
-    console.log(`Final result: Generated ${tweets.length} tweets`)
-
-    return new Response(
-      JSON.stringify({ tweets }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.9,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 2048,
+          },
+        }),
       }
-    )
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Gemini response received');
+
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error('Invalid response from Gemini API');
+    }
+
+    const generatedText = data.candidates[0].content.parts[0].text;
+    const tweets = parseTweets(generatedText, format);
+
+    console.log(`Generated ${tweets.length} tweets`);
+
+    return new Response(JSON.stringify({ tweets }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
-    console.error('Error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    )
+    console.error('Error in generate-tweets function:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-})
+});
+
+async function getProfileAnalysis(supabase: any, userId: string, handles: string[]) {
+  if (!handles || handles.length === 0) {
+    return [];
+  }
+
+  try {
+    const { data: profiles, error } = await supabase
+      .from('scraped_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .in('handle', handles);
+
+    if (error) {
+      console.error('Error fetching profile data:', error);
+      return [];
+    }
+
+    return profiles || [];
+  } catch (error) {
+    console.error('Error in getProfileAnalysis:', error);
+    return [];
+  }
+}
+
+function createEnhancedPrompt({ handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA, profileData }: any) {
+  let prompt = `You are an expert Twitter content creator. Generate ${tweetCount} high-quality tweets about: "${topic}"\n\n`;
+
+  // Add tone context
+  prompt += `Tone: ${tone}\n`;
+
+  // Add profile-specific writing style analysis
+  if (profileData && profileData.length > 0) {
+    prompt += `\nWriting Style Analysis (mimic these patterns):\n`;
+    
+    profileData.forEach((profile: any, index: number) => {
+      prompt += `\n@${profile.handle}:\n`;
+      
+      if (profile.bio) {
+        prompt += `- Bio: "${profile.bio}"\n`;
+      }
+      
+      if (profile.writing_style_json) {
+        const style = profile.writing_style_json;
+        if (style.commonStartPhrases && style.commonStartPhrases.length > 0) {
+          prompt += `- Often starts tweets with: ${style.commonStartPhrases.join(', ')}\n`;
+        }
+        if (style.commonEndPhrases && style.commonEndPhrases.length > 0) {
+          prompt += `- Often ends tweets with: ${style.commonEndPhrases.join(', ')}\n`;
+        }
+        if (style.toneKeywords && style.toneKeywords.length > 0) {
+          prompt += `- Tone keywords: ${style.toneKeywords.join(', ')}\n`;
+        }
+      }
+      
+      if (profile.common_phrases && profile.common_phrases.length > 0) {
+        prompt += `- Common phrases: ${profile.common_phrases.slice(0, 5).join(', ')}\n`;
+      }
+      
+      if (profile.topic_areas && profile.topic_areas.length > 0) {
+        prompt += `- Topics they discuss: ${profile.topic_areas.join(', ')}\n`;
+      }
+      
+      prompt += `- Average tweet length: ${profile.average_tweet_length} characters\n`;
+      prompt += `- Uses threads ${profile.thread_percentage}% of the time\n`;
+      prompt += `- Uses emojis ${profile.emoji_usage}% of the time\n`;
+    });
+    
+    prompt += `\nIMPORTANT: Blend the writing styles of these ${profileData.length} accounts. Use their common phrases, sentence structures, and tone patterns naturally.\n`;
+  } else {
+    prompt += `\nNote: No specific writing style data available. Create engaging tweets in the requested tone.\n`;
+  }
+
+  // Format-specific instructions
+  if (format.includes('thread')) {
+    const threadLength = parseInt(format.split('-')[1]) || 3;
+    prompt += `\nFormat: Create ${Math.ceil(tweetCount / threadLength)} thread variations, each with ${threadLength} connected tweets. Each thread should:\n`;
+    prompt += `- Start with "1/${threadLength}" and continue "2/${threadLength}", etc.\n`;
+    prompt += `- Tell a complete story or make a complete argument\n`;
+    prompt += `- Each tweet should be engaging on its own but connect to the narrative\n`;
+  } else {
+    prompt += `\nFormat: Create ${tweetCount} standalone tweets. Each should be complete and engaging on its own.\n`;
+  }
+
+  // Additional options
+  if (includeHashtags) {
+    prompt += `- Include relevant hashtags (2-3 max per tweet)\n`;
+  }
+  if (includeEmojis) {
+    prompt += `- Use emojis strategically to enhance engagement\n`;
+  }
+  if (includeCTA) {
+    prompt += `- Include compelling calls-to-action where appropriate\n`;
+  }
+
+  prompt += `\nGuidelines:
+- Keep tweets under 280 characters
+- Make each tweet engaging and shareable
+- Use the analyzed writing patterns naturally
+- Vary sentence structure and length
+- Be authentic to the selected writing styles
+- Focus on value and engagement over perfection
+
+Return ONLY the tweets, numbered, with no additional commentary.`;
+
+  return prompt;
+}
+
+function parseTweets(generatedText: string, format: string): Array<{id: string, content: string, type: 'single' | 'thread'}> {
+  const tweets = [];
+  const lines = generatedText.split('\n').filter(line => line.trim());
+  
+  let tweetId = 1;
+  
+  if (format.includes('thread')) {
+    // For threads, group tweets by thread indicators (1/x, 2/x, etc.)
+    let currentThread = [];
+    
+    for (const line of lines) {
+      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      
+      if (cleanLine.includes('1/')) {
+        // Start of new thread
+        if (currentThread.length > 0) {
+          tweets.push({
+            id: `tweet-${tweetId++}`,
+            content: currentThread.join('\n\n'),
+            type: 'thread' as const
+          });
+        }
+        currentThread = [cleanLine];
+      } else if (cleanLine.includes('/')) {
+        // Continuation of thread
+        currentThread.push(cleanLine);
+      } else if (cleanLine.length > 10) {
+        // Standalone content, might be part of thread
+        if (currentThread.length > 0) {
+          currentThread.push(cleanLine);
+        } else {
+          tweets.push({
+            id: `tweet-${tweetId++}`,
+            content: cleanLine,
+            type: 'single' as const
+          });
+        }
+      }
+    }
+    
+    // Add the last thread if exists
+    if (currentThread.length > 0) {
+      tweets.push({
+        id: `tweet-${tweetId++}`,
+        content: currentThread.join('\n\n'),
+        type: 'thread' as const
+      });
+    }
+  } else {
+    // For single tweets
+    for (const line of lines) {
+      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      if (cleanLine.length > 10) {
+        tweets.push({
+          id: `tweet-${tweetId++}`,
+          content: cleanLine,
+          type: 'single' as const
+        });
+      }
+    }
+  }
+  
+  return tweets;
+}

@@ -1,13 +1,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wand2, RefreshCw } from "lucide-react";
+import ProfileSelector from "./ProfileSelector";
 
 interface TweetFormProps {
   handles: string[];
@@ -72,24 +72,6 @@ const TweetForm = ({
     { value: 10, label: '10 Variations' }
   ];
 
-  const addHandle = () => {
-    if (handles.length < 3) {
-      onHandlesChange([...handles, '']);
-    }
-  };
-
-  const updateHandle = (index: number, value: string) => {
-    const newHandles = [...handles];
-    newHandles[index] = value;
-    onHandlesChange(newHandles);
-  };
-
-  const removeHandle = (index: number) => {
-    if (handles.length > 1) {
-      onHandlesChange(handles.filter((_, i) => i !== index));
-    }
-  };
-
   return (
     <Card className="bg-background/80 backdrop-blur-sm border-white/10">
       <CardHeader>
@@ -99,34 +81,12 @@ const TweetForm = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Twitter Handles */}
-        <div className="space-y-2">
-          <Label>Twitter Handles to Mimic (1-3)</Label>
-          {handles.map((handle, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                placeholder="@naval, @levelsio, etc."
-                value={handle}
-                onChange={(e) => updateHandle(index, e.target.value)}
-                className="flex-1"
-              />
-              {handles.length > 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeHandle(index)}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          ))}
-          {handles.length < 3 && (
-            <Button variant="outline" size="sm" onClick={addHandle}>
-              Add Handle
-            </Button>
-          )}
-        </div>
+        {/* Profile Selector - replaces manual handle inputs */}
+        <ProfileSelector
+          selectedProfiles={handles}
+          onProfilesChange={onHandlesChange}
+          maxProfiles={3}
+        />
 
         {/* Topic */}
         <div className="space-y-2">
