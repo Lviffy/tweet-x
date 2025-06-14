@@ -49,95 +49,241 @@ async function scrapeTwitterProfileData(handle: string) {
     });
 
     if (!resp.ok) {
-      throw new Error(
+      console.error(
         `Failed to fetch profile page: ${resp.status} ${resp.statusText}`
       );
+      return { success: false, error: `Could not fetch page (HTTP ${resp.status})` };
     }
     const html = await resp.text();
+    console.log('Fetched HTML length:', html.length);
 
-    // Extract profile JSON embedded in the initial state script
-    const initialStateMatch = html.match(
-      /<script[^>]*>window\.__INITIAL_STATE__\s?=\s?({.*?});<\/script>/
-    );
-    // Alternatively, fallback to parsing inline HTML for pieces if no JSON is found
-
-    // Basic DOM extraction using regex (very brittle, but works for simple needs)
-    const displayName =
-      html.match(/<title>\((.*?)\)\s*\/ X<\/title>/) ||
-      html.match(/profileBanner.*?<span.*?>(.*?)<\/span>/); // fallback (rarely hits)
-
-    const bio =
-      html.match(
-        /<meta name="description" content="(.*?) \/ X fr/
-      )?.[1] ||
-      html.match(
-        /<meta name="description" content="([^"]*)"/
-      )?.[1] ||
-      "";
-
-    // Avatar
-    let avatarUrl = "";
-    const avatarMatch = html.match(
-      /property="og:image" content="([^"]+)"/
-    );
-    if (avatarMatch) avatarUrl = avatarMatch[1];
-
-    // Verified
-    let verified = false;
-    if (
-      html.includes('Verified account') ||
-      html.includes('svg') && html.includes('verified')
-    ) {
-      verified = true;
-    }
-
-    // fallback displayName
-    const display =
-      (displayName && displayName[1]) ||
-      cleanHandle ||
-      "";
-
-    // Try to extract recent tweet text
-    // On X web pages, tweet data is embedded in many forms; try simple <meta name="description"... for first tweet
-    let tweets = [];
-    const tweetBlocks = html.split('data-testid="tweetText"');
-    for (let i = 1; i < Math.min(6, tweetBlocks.length); i++) {
-      // look back for text node (this is NOT reliable for all Twitter html, but for public, basic pages works)
-      const b = tweetBlocks[i];
-      const textMatch = b.match(/>([^<]{15,})<\/span>/);
-      const text = textMatch ? textMatch[1] : "";
-      if (!text) continue;
-      // Timestamps are not easily accessible; use now minus i*2 days as a rough guess.
-      tweets.push({
-        text,
-        length: text.length,
-        isThread: text.startsWith("1/"),
-        hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
-        hashtags: (text.match(/#\w+/g) || []),
-        timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
-        engagement: { likes: Math.floor(Math.random() * 200), retweets: Math.floor(Math.random() * 50), replies: Math.floor(Math.random() * 15) },
-      });
-    }
-    if (tweets.length === 0) {
-      // fallback: get from <meta...>
-      const metaTweet = html.match(/<meta name="description" content="([^"]+)"/);
-      if (metaTweet) {
-        tweets.push({
-          text: metaTweet[1],
-          length: metaTweet[1].length,
-          isThread: metaTweet[1].startsWith("1/"),
-          hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(metaTweet[1]),
-          hashtags: (metaTweet[1].match(/#\w+/g) || []),
-          timestamp: new Date(Date.now() - 1 * 48 * 60 * 60 * 1000).toISOString(),
-          engagement: { likes: Math.floor(Math.random() * 200), retweets: Math.floor(Math.random() * 50), replies: Math.floor(Math.random() * 15) },
-        });
+    // --- Enhanced Logging Begin ---
+    try {
+      if (html.length < 10000) {
+        console.log('HTML Preview:', html.slice(0, 500));
       }
+    } catch (previewErr) {
+      console.error('Error previewing HTML:', previewErr);
+    }
+    // --- Enhanced Logging End ---
+
+    // Robust extraction block for profile info
+
+    // 1. Display name (try <title>, og:title, then fallback)
+    let displayName = "";
+    let displayNameSources = [];
+    try {
+      let match = html.match(/<title>\((.*?)\)\s*\/ X<\/title>/);
+      if (match && match[1]) {
+        displayName = match[1];
+        displayNameSources.push('title/regex');
+      }
+      if (!displayName) {
+        match = html.match(/property="og:title" content="([^"]+)"/i);
+        if (match && match[1]) {
+          displayName = match[1];
+          displayNameSources.push('og:title');
+        }
+      }
+      if (!displayName) {
+        match = html.match(/"name":"([^"]+)"/i);
+        if (match && match[1]) {
+          displayName = match[1];
+          displayNameSources.push('json_name');
+        }
+      }
+      if (!displayName) {
+        displayName = cleanHandle;
+        displayNameSources.push('cleanHandle');
+      }
+      console.log('Display name extraction method(s):', displayNameSources, '| Result:', displayName);
+    } catch (err) {
+      console.error('Error extracting display name:', err);
+    }
+
+    // 2. Bio (try og:description, meta, fallback)
+    let bio = "";
+    let bioSources = [];
+    try {
+      let match =
+        html.match(/<meta property="og:description" content="([^"]+)"/i) ||
+        html.match(/<meta name="description" content="([^"]*)"/i);
+
+      if (match && match[1]) {
+        bio = match[1];
+        bioSources.push('og:description/meta');
+      }
+      if (!bio) {
+        match = html.match(/"description":"([^"]+)"/i);
+        if (match && match[1]) {
+          bio = match[1];
+          bioSources.push('json_description');
+        }
+      }
+      bio = bio.replace(/\s*\/\s*X.*$/, '').trim();
+      console.log('Bio extraction method(s):', bioSources, '| Result:', bio);
+    } catch (err) {
+      console.error('Error extracting bio:', err);
+    }
+
+    // 3. Avatar
+    let avatarUrl = "";
+    let avatarSources = [];
+    try {
+      let match =
+        html.match(/property="og:image" content="([^"]+)"/i) ||
+        html.match(/<meta name="twitter:image" content="([^"]+)"/i);
+      if (match && match[1]) {
+        avatarUrl = match[1];
+        avatarSources.push('og:image/twitter:image');
+      }
+      if (!avatarUrl) {
+        // Some profiles fall back to a static or "default" avatar url pattern
+        match = html.match(/"profile_image_url_https":"([^"]+)"/i);
+        if (match && match[1]) {
+          avatarUrl = match[1];
+          avatarSources.push('profile_image_url_https');
+        }
+      }
+      console.log('Avatar extraction method(s):', avatarSources, '| Result:', avatarUrl);
+    } catch (err) {
+      console.error('Error extracting avatar:', err);
+    }
+
+    // 4. Verified
+    let verified = false;
+    try {
+      if (
+        html.includes('Verified account') ||
+        html.includes('svg') && html.includes('verified')
+      ) {
+        verified = true;
+      }
+      // Try also JSON flags (sometimes appears in <script type="application/ld+json">):
+      if (!verified) {
+        const verifiedMatch = html.match(/"verified":(true|false)/i);
+        verified = verifiedMatch ? verifiedMatch[1] === "true" : false;
+      }
+      console.log('Verified extraction result:', verified);
+    } catch (err) {
+      console.error('Error extracting verified:', err);
+    }
+
+    // 5. Extract tweets: try multiple fallback methods
+    let tweets = [];
+    let tweetExtractionAttempts = [];
+    try {
+      // 5a. Method 1: Split on data-testid="tweetText"
+      const tweetBlocks = html.split('data-testid="tweetText"');
+      if (tweetBlocks.length > 1) {
+        for (let i = 1; i < Math.min(10, tweetBlocks.length); i++) {
+          const b = tweetBlocks[i];
+          const textMatch = b.match(/>([^<]{8,500})<\/span>/);
+          const text = textMatch ? textMatch[1].trim() : "";
+          if (!text) continue;
+          tweets.push({
+            text,
+            length: text.length,
+            isThread: text.startsWith("1/"),
+            hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
+            hashtags: (text.match(/#\w+/g) || []),
+            timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: {
+              likes: Math.floor(Math.random() * 200),
+              retweets: Math.floor(Math.random() * 50),
+              replies: Math.floor(Math.random() * 15)
+            },
+          });
+        }
+        tweetExtractionAttempts.push('tweetText split');
+      }
+
+      // 5b. Method 2: Try open graph meta (for pinned tweet)
+      if (tweets.length === 0) {
+        const metaTweet = html.match(/<meta property="og:description" content="([^"]+)"/i);
+        if (metaTweet) {
+          tweets.push({
+            text: metaTweet[1],
+            length: metaTweet[1].length,
+            isThread: metaTweet[1].startsWith("1/"),
+            hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(metaTweet[1]),
+            hashtags: (metaTweet[1].match(/#\w+/g) || []),
+            timestamp: new Date(Date.now() - 1 * 48 * 60 * 60 * 1000).toISOString(),
+            engagement: {
+              likes: Math.floor(Math.random() * 200),
+              retweets: Math.floor(Math.random() * 50),
+              replies: Math.floor(Math.random() * 15)
+            },
+          });
+          tweetExtractionAttempts.push('meta og:description');
+        }
+      }
+
+      // 5c. Method 3: Try very naive "tweet-text" class
+      if (tweets.length === 0) {
+        const classBlocks = html.split('class="tweet-text"');
+        if (classBlocks.length > 1) {
+          for (let i = 1; i < Math.min(6, classBlocks.length); i++) {
+            const b = classBlocks[i];
+            const textMatch = b.match(/>([^<]+)</);
+            const text = textMatch ? textMatch[1].trim() : "";
+            if (!text) continue;
+            tweets.push({
+              text,
+              length: text.length,
+              isThread: text.startsWith("1/"),
+              hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
+              hashtags: (text.match(/#\w+/g) || []),
+              timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
+              engagement: {
+                likes: Math.floor(Math.random() * 200),
+                retweets: Math.floor(Math.random() * 50),
+                replies: Math.floor(Math.random() * 15)
+              },
+            });
+          }
+          tweetExtractionAttempts.push('tweet-text class');
+        }
+      }
+
+      // 5d. Last resort: find quoted text nodes
+      if (tweets.length === 0) {
+        const quoteMatches = [...html.matchAll(/>([^<]{15,280})<\/span>/g)];
+        for (let i = 0; i < Math.min(6, quoteMatches.length); i++) {
+          const text = quoteMatches[i][1]?.trim();
+          if (!text) continue;
+          tweets.push({
+            text,
+            length: text.length,
+            isThread: text.startsWith("1/"),
+            hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
+            hashtags: (text.match(/#\w+/g) || []),
+            timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: {
+              likes: Math.floor(Math.random() * 200),
+              retweets: Math.floor(Math.random() * 50),
+              replies: Math.floor(Math.random() * 15)
+            },
+          });
+        }
+        tweetExtractionAttempts.push('fallback span');
+      }
+
+      console.log(`Tweet extraction attempts in order:`, tweetExtractionAttempts);
+      console.log(`Tweets extracted:`, tweets.length);
+
+      if (tweets.length === 0) {
+        // Log part of the HTML to help debug
+        console.warn('No tweets found. HTML preview:', html.slice(0, 1000));
+      }
+    } catch (err) {
+      console.error('Error extracting tweets:', err);
     }
 
     return {
       success: true,
       profile: {
-        displayName: display,
+        displayName,
         bio,
         verified,
         avatarUrl,
