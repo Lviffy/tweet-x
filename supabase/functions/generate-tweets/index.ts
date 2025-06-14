@@ -28,6 +28,12 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
+    // Check if Gemini API key is available
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!geminiApiKey) {
+      throw new Error('Gemini API key not configured')
+    }
+
     // Build the prompt based on parameters
     let stylePrompt = ""
     if (handles && handles.length > 0) {
@@ -70,8 +76,10 @@ Generate 3 different variations. For threads, separate each tweet with "---" and
 
 Return only the tweet content, no additional commentary.`
 
+    console.log('Calling Gemini API with prompt:', prompt)
+
     // Call Gemini API
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${Deno.env.get('GEMINI_API_KEY')}`, {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,6 +106,13 @@ Return only the tweet content, no additional commentary.`
     }
 
     const geminiData = await geminiResponse.json()
+    console.log('Gemini response:', JSON.stringify(geminiData, null, 2))
+
+    if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content) {
+      console.error('Invalid Gemini response structure:', geminiData)
+      throw new Error('Invalid response from Gemini AI')
+    }
+
     const generatedContent = geminiData.candidates[0].content.parts[0].text
 
     // Parse the generated content into individual tweets
@@ -118,6 +133,8 @@ Return only the tweet content, no additional commentary.`
         }
       }
     })
+
+    console.log('Generated tweets:', tweets)
 
     return new Response(
       JSON.stringify({ tweets }),
