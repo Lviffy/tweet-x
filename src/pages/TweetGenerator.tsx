@@ -1,3 +1,4 @@
+// Add debug log and error boundary to catch render errors
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wand2, Copy, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+
+console.log("TweetGenerator page mounted"); // Debug log
+
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [error, setError] = useState<Error | null>(null);
+
+  if (error) {
+    return (
+      <div className="p-8 text-red-600 text-center">
+        <h2>Something went wrong while loading the Tweet Generator page.</h2>
+        <p>{error.message}</p>
+      </div>
+    );
+  }
+
+  return (
+    <React.ErrorBoundary
+      fallbackRender={({ error }) => {
+        setError(error);
+        return null;
+      }}
+    >
+      {children}
+    </React.ErrorBoundary>
+  );
+}
 
 interface GeneratedTweet {
   id: string;
@@ -336,4 +363,11 @@ const TweetGenerator = () => {
   );
 };
 
-export default TweetGenerator;
+// Wrap the component in the error boundary
+const WrappedTweetGenerator = () => (
+  <ErrorBoundary>
+    <TweetGenerator />
+  </ErrorBoundary>
+);
+
+export default WrappedTweetGenerator;
