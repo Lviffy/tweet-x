@@ -36,7 +36,7 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
 const TweetGenerator = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [handles, setHandles] = useState<string[]>(['']);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
@@ -55,9 +55,9 @@ const TweetGenerator = () => {
     }
   }, [sessionId]);
 
-  // Redirect to auth if not authenticated
+  // Redirect to auth if not authenticated - but only after loading is complete
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       toast({
         title: "Authentication Required",
         description: "Please sign in to use the tweet generator.",
@@ -65,7 +65,7 @@ const TweetGenerator = () => {
       });
       navigate("/auth");
     }
-  }, [user, navigate, toast]);
+  }, [user, loading, navigate, toast]);
 
   const handleGenerate = async () => {
     const newSessionId = await generateTweets({
@@ -91,8 +91,18 @@ const TweetGenerator = () => {
     });
   };
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  // Don't render anything if user is not authenticated (will redirect)
   if (!user) {
-    return null; // Will redirect to auth
+    return null;
   }
 
   return (

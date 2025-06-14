@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { LogIn, UserPlus } from "lucide-react";
 
 const AuthPage = () => {
@@ -16,6 +17,14 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   // Clear fields when switching tabs
   const reset = () => {
@@ -64,14 +73,11 @@ const AuthPage = () => {
     setLoading(true);
     
     try {
-      // Use the current domain without the hash for the redirect
-      const baseUrl = window.location.origin;
-      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: `${baseUrl}/auth`
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
       
@@ -117,6 +123,11 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
+
+  // Don't render the form if user is already authenticated
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-gray-900/20">
