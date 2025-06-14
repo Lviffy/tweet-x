@@ -40,7 +40,7 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white border-b border-border/10">
+    <header className="fixed top-0 left-0 right-0 z-[100] bg-black text-white border-b border-border/10">
       <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           {/* Left nav */}
@@ -84,7 +84,7 @@ const Header = () => {
               </div>
             ) : (
               <Button 
-                className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition cursor-pointer relative z-10"
+                className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition cursor-pointer"
                 onClick={handleSignInClick}
                 type="button"
               >
