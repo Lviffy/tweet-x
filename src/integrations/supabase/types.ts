@@ -104,6 +104,62 @@ export type Database = {
         }
         Relationships: []
       }
+      scraped_tweets: {
+        Row: {
+          content: string
+          created_at: string | null
+          engagement_likes: number | null
+          engagement_replies: number | null
+          engagement_retweets: number | null
+          has_emojis: boolean | null
+          hashtags: string[] | null
+          id: string
+          is_thread: boolean | null
+          position: number | null
+          profile_id: string
+          scraped_at: string
+          tweet_length: number
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          engagement_likes?: number | null
+          engagement_replies?: number | null
+          engagement_retweets?: number | null
+          has_emojis?: boolean | null
+          hashtags?: string[] | null
+          id?: string
+          is_thread?: boolean | null
+          position?: number | null
+          profile_id: string
+          scraped_at: string
+          tweet_length: number
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          engagement_likes?: number | null
+          engagement_replies?: number | null
+          engagement_retweets?: number | null
+          has_emojis?: boolean | null
+          hashtags?: string[] | null
+          id?: string
+          is_thread?: boolean | null
+          position?: number | null
+          profile_id?: string
+          scraped_at?: string
+          tweet_length?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraped_tweets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "scraped_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tweet_sessions: {
         Row: {
           created_at: string

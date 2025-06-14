@@ -200,9 +200,9 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
             {/* Real Scraped Tweets */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Scraped Tweets Analysis</CardTitle>
+                <CardTitle className="text-lg">Real Scraped Tweets</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Real tweets from @{profile.handle} (click to view detailed analysis)
+                  Authentic tweets from @{profile.handle} (click to view detailed analysis)
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -213,7 +213,7 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
                   </div>
                 ) : tweets.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">No tweets available</p>
+                    <p className="text-sm text-muted-foreground">No tweets scraped yet for this profile</p>
                   </div>
                 ) : (
                   tweets.map((tweet) => {

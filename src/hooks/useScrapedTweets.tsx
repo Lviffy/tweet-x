@@ -32,7 +32,7 @@ export const useScrapedTweets = (profileId?: string) => {
     try {
       setLoading(true);
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('scraped_tweets')
         .select('*')
         .eq('profile_id', targetProfileId)
