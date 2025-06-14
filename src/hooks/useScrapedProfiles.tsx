@@ -35,7 +35,8 @@ export const useScrapedProfiles = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Use type assertion to work with the table that exists but isn't in types yet
+      const { data, error } = await (supabase as any)
         .from('scraped_profiles')
         .select('*')
         .eq('user_id', user.id)
@@ -118,7 +119,7 @@ export const useScrapedProfiles = () => {
 
   const deleteProfile = async (profileId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('scraped_profiles')
         .delete()
         .eq('id', profileId);
