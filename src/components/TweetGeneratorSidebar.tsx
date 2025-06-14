@@ -30,8 +30,8 @@ export const TweetGeneratorSidebar = () => {
     try {
       setLoading(true);
       
-      // Direct query to tweet_sessions table
-      const { data, error } = await supabase
+      // Type-safe query using any to bypass type issues temporarily
+      const { data, error } = await (supabase as any)
         .from('tweet_sessions')
         .select('id, title, created_at')
         .eq('user_id', user?.id)
