@@ -4,7 +4,7 @@ import { TweetGenerationRequest, ProfileData } from './types.ts';
 export function createDetailedPrompt(params: TweetGenerationRequest & { profileData: ProfileData[] }): string {
   const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA, profileData } = params;
   
-  let prompt = `You are an expert Twitter content creator and analyst. Generate ${tweetCount} high-quality tweets about: "${topic}"\n\n`;
+  let prompt = `You are an expert Twitter content creator and analyst. Generate EXACTLY ${tweetCount} ${format.includes('thread') ? 'thread variations' : 'individual tweets'} about: "${topic}"\n\n`;
 
   // Add tone context
   prompt += `Tone: ${tone}\n`;
@@ -84,18 +84,21 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
   // Enhanced format-specific instructions
   if (format.includes('thread')) {
     const threadLength = parseInt(format.split('-')[1]) || 3;
-    prompt += `\nFORMAT: Create ${Math.ceil(tweetCount / threadLength)} thread variations, each with ${threadLength} connected tweets.\n`;
+    prompt += `\nFORMAT: Create EXACTLY ${tweetCount} thread variations, each with ${threadLength} connected tweets.\n`;
     prompt += `THREAD REQUIREMENTS:\n`;
-    prompt += `- Start with strong hook: "🧵 Thread on [topic]:" or similar engaging opener\n`;
-    prompt += `- Number tweets: "1/${threadLength}", "2/${threadLength}", etc.\n`;
+    prompt += `- Each thread variation should be numbered (Thread 1, Thread 2, etc.)\n`;
+    prompt += `- Start each thread with strong hook: "🧵 Thread on [topic]:" or similar engaging opener\n`;
+    prompt += `- Number tweets within each thread: "1/${threadLength}", "2/${threadLength}", etc.\n`;
     prompt += `- Each tweet must be complete but connect to narrative\n`;
     if (profileData && profileData.length > 0) {
       prompt += `- Use profile's signature phrases naturally throughout\n`;
     }
-    prompt += `- End with strong CTA or question to drive engagement\n`;
+    prompt += `- End each thread with strong CTA or question to drive engagement\n`;
+    prompt += `- Separate each thread variation clearly\n`;
   } else {
-    prompt += `\nFORMAT: Create ${tweetCount} standalone tweets.\n`;
+    prompt += `\nFORMAT: Create EXACTLY ${tweetCount} standalone tweets.\n`;
     prompt += `SINGLE TWEET REQUIREMENTS:\n`;
+    prompt += `- Number each tweet clearly (Tweet 1, Tweet 2, etc.)\n`;
     prompt += `- Each tweet must be complete, engaging, and actionable\n`;
     if (profileData && profileData.length > 0) {
       prompt += `- Use profile's opening and closing patterns\n`;
@@ -105,6 +108,7 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
       prompt += `- Keep tweets concise and impactful (aim for 150-250 characters)\n`;
       prompt += `- Use engaging hooks and clear calls-to-action\n`;
     }
+    prompt += `- Each tweet should be unique and offer different value\n`;
   }
 
   // Enhanced options with style context
@@ -128,22 +132,23 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
   }
 
   prompt += `\nFINAL QUALITY GUIDELINES:\n`;
-  prompt += `- Keep tweets under 280 characters\n`;
-  prompt += `- Make each tweet immediately engaging and shareable\n`;
+  prompt += `- Keep individual tweets under 280 characters\n`;
+  prompt += `- Make each ${format.includes('thread') ? 'thread variation' : 'tweet'} immediately engaging and shareable\n`;
+  prompt += `- CRITICAL: You must generate EXACTLY ${tweetCount} ${format.includes('thread') ? 'thread variations' : 'tweets'}, no more, no less\n`;
   if (profileData && profileData.length > 0) {
     prompt += `- Use the analyzed signature phrases and hooks EXACTLY as provided\n`;
     prompt += `- Vary sentence structure while maintaining the profile's rhythm\n`;
     prompt += `- Be authentic to the selected writing styles - don't mix different voices\n`;
-    prompt += `- Each tweet should feel like it could have been written by the analyzed profiles\n`;
+    prompt += `- Each ${format.includes('thread') ? 'thread' : 'tweet'} should feel like it could have been written by the analyzed profiles\n`;
   } else {
     prompt += `- Create original, authentic content in the specified tone\n`;
     prompt += `- Vary sentence structure while maintaining consistency\n`;
     prompt += `- Focus on value, engagement, and clarity\n`;
-    prompt += `- Each tweet should be memorable and shareable\n`;
+    prompt += `- Each ${format.includes('thread') ? 'thread' : 'tweet'} should be memorable and shareable\n`;
   }
   prompt += `- Focus on value, engagement, and similarity to analyzed patterns\n\n`;
 
-  prompt += `Return ONLY the tweets, numbered, with no additional commentary or explanations.`;
+  prompt += `Return ONLY the ${tweetCount} ${format.includes('thread') ? 'thread variations' : 'tweets'}, clearly numbered and formatted, with no additional commentary or explanations.`;
 
   return prompt;
 }

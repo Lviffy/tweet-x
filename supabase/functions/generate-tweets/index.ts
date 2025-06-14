@@ -57,9 +57,11 @@ serve(async (req) => {
 
     // Call Gemini AI
     const generatedText = await callGeminiAI(prompt);
-    const tweets = parseTweets(generatedText, format);
+    
+    // Parse tweets with the requested count
+    const tweets = parseTweets(generatedText, format, tweetCount);
 
-    console.log(`Generated ${tweets.length} tweets`);
+    console.log(`Generated ${tweets.length} tweets (requested: ${tweetCount})`);
 
     return new Response(JSON.stringify({ tweets }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
