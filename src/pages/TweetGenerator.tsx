@@ -47,11 +47,21 @@ const TweetGenerator = () => {
   const [includeCTA, setIncludeCTA] = useState(false);
   const { toast } = useToast();
 
-  const { isGenerating, generatedTweets, sessionParams, generateTweets, loadSession, setGeneratedTweets } = useTweetGeneration();
+  const { 
+    isGenerating, 
+    generatedTweets, 
+    sessionParams, 
+    isLoadingSession,
+    generateTweets, 
+    loadSession, 
+    clearSession,
+    setGeneratedTweets 
+  } = useTweetGeneration();
 
   // Reset form when sessionId changes or is removed
   useEffect(() => {
     if (!sessionId) {
+      console.log('No sessionId, clearing form');
       setHandles([]);
       setTopic('');
       setTone('');
@@ -60,20 +70,22 @@ const TweetGenerator = () => {
       setIncludeHashtags(false);
       setIncludeEmojis(false);
       setIncludeCTA(false);
-      setGeneratedTweets([]);
+      clearSession();
     }
-  }, [sessionId, setGeneratedTweets]);
+  }, [sessionId, clearSession]);
 
   // Load session if sessionId is provided
   useEffect(() => {
-    if (sessionId) {
+    if (sessionId && !isLoadingSession) {
+      console.log('Loading session:', sessionId);
       loadSession(sessionId);
     }
-  }, [sessionId, loadSession]);
+  }, [sessionId, loadSession, isLoadingSession]);
 
   // Update form fields when session parameters are loaded
   useEffect(() => {
     if (sessionParams) {
+      console.log('Updating form with session params:', sessionParams);
       setHandles(sessionParams.handles || []);
       setTopic(sessionParams.topic || '');
       setTone(sessionParams.tone || '');
@@ -117,8 +129,19 @@ const TweetGenerator = () => {
       return;
     }
 
+    console.log('Generating tweets with params:', {
+      handles,
+      topic: topic.trim(),
+      tone,
+      format,
+      tweetCount,
+      includeHashtags,
+      includeEmojis,
+      includeCTA
+    });
+
     const newSessionId = await generateTweets({
-      handles: handles.length > 0 ? handles : [], // Ensure empty array instead of undefined
+      handles: handles.length > 0 ? handles : [],
       topic: topic.trim(),
       tone,
       format,
@@ -141,11 +164,14 @@ const TweetGenerator = () => {
     });
   };
 
-  // Show loading spinner while checking authentication
-  if (loading) {
+  // Show loading spinner while checking authentication or loading session
+  if (loading || isLoadingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+        {isLoadingSession && (
+          <p className="ml-4 text-white">Loading session...</p>
+        )}
       </div>
     );
   }
