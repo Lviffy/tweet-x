@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -7,13 +8,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// CHANGE: Instead of scraping directly, call the Puppeteer API
-
+// CHANGE: Updated to call the correct endpoint
 async function fetchPuppeteerProfile(handle: string): Promise<any> {
-  const apiUrl = Deno.env.get('PUPPETEER_API_URL'); // Set this secret in Supabase settings!
+  const apiUrl = Deno.env.get('PUPPETEER_API_URL'); // Should be https://puppeteer-rtug.onrender.com
   const apiKey = Deno.env.get('PUPPETEER_API_KEY') || null; // Optional, if used
 
-  const response = await fetch(apiUrl, {
+  if (!apiUrl) {
+    throw new Error('PUPPETEER_API_URL environment variable is not set');
+  }
+
+  // Make sure to call the correct endpoint
+  const fullUrl = `${apiUrl}/scrape-twitter-profile`;
+  
+  console.log('Calling Puppeteer API at:', fullUrl);
+
+  const response = await fetch(fullUrl, {
     method: 'POST',
     headers: {
       "Content-Type": "application/json",
@@ -21,10 +30,13 @@ async function fetchPuppeteerProfile(handle: string): Promise<any> {
     },
     body: JSON.stringify({ handle }),
   });
+  
   if (!response.ok) {
     const errText = await response.text();
+    console.error('Puppeteer API response:', response.status, errText);
     throw new Error(`Puppeteer API failed: ${errText}`);
   }
+  
   return await response.json();
 }
 
@@ -170,7 +182,7 @@ serve(async (req) => {
       });
     }
 
-    // Replace built-in Deno scraping with Puppeteer API:
+    // Call the Puppeteer API with the correct endpoint
     const scrapedData = await fetchPuppeteerProfile(handle);
 
     if (!scrapedData.success) {
