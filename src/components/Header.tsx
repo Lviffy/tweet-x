@@ -1,54 +1,23 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from '@supabase/supabase-js';
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
 const Header = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Handle auth events
-        if (event === 'SIGNED_IN') {
-          toast({
-            title: "Welcome!",
-            description: "You have been signed in successfully."
-          });
-        }
-      }
-    );
-
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       toast({
         title: "Signed Out",
         description: "You have been signed out successfully."
       });
       navigate("/");
     } catch (error) {
+      console.error("Sign out error:", error);
       toast({
         title: "Sign Out Failed",
         description: "An error occurred while signing out.",

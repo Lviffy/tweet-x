@@ -28,18 +28,19 @@ const AuthPage = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
       });
       
       if (error) {
+        console.error("Sign in error:", error);
         toast({ 
           title: "Sign In Failed", 
           description: error.message, 
           variant: "destructive" 
         });
-      } else {
+      } else if (data.user) {
         toast({ 
           title: "Signed In!", 
           description: "Welcome back." 
@@ -47,6 +48,7 @@ const AuthPage = () => {
         navigate("/");
       }
     } catch (error) {
+      console.error("Unexpected sign in error:", error);
       toast({ 
         title: "Sign In Failed", 
         description: "An unexpected error occurred.", 
@@ -64,7 +66,7 @@ const AuthPage = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({ 
+      const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -73,7 +75,8 @@ const AuthPage = () => {
       });
       
       if (error) {
-        if (error.message.includes("already registered")) {
+        console.error("Sign up error:", error);
+        if (error.message.includes("already registered") || error.message.includes("User already registered")) {
           toast({ 
             title: "Account Already Exists", 
             description: "This email is already registered. Please sign in instead.", 
@@ -88,14 +91,23 @@ const AuthPage = () => {
           });
         }
       } else {
-        toast({ 
-          title: "Check your inbox", 
-          description: "Email sent for confirmation. Please check your email and click the confirmation link." 
-        });
+        console.log("Sign up successful:", data);
+        if (data.user && !data.user.email_confirmed_at) {
+          toast({ 
+            title: "Check your inbox", 
+            description: "Please check your email and click the confirmation link to complete your registration." 
+          });
+        } else {
+          toast({ 
+            title: "Account Created!", 
+            description: "You can now sign in with your credentials." 
+          });
+        }
         setTab("signin");
         reset();
       }
     } catch (error) {
+      console.error("Unexpected sign up error:", error);
       toast({ 
         title: "Sign Up Failed", 
         description: "An unexpected error occurred.", 
