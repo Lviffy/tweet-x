@@ -46,7 +46,7 @@ const TweetGenerator = () => {
   const [includeCTA, setIncludeCTA] = useState(false);
   const { toast } = useToast();
 
-  const { isGenerating, generatedTweets, generateTweets, loadSession, setGeneratedTweets } = useTweetGeneration();
+  const { isGenerating, generatedTweets, sessionParams, generateTweets, loadSession, setGeneratedTweets } = useTweetGeneration();
 
   // Reset form when sessionId changes or is removed
   useEffect(() => {
@@ -70,6 +70,20 @@ const TweetGenerator = () => {
       loadSession(sessionId);
     }
   }, [sessionId, loadSession]);
+
+  // Update form fields when session parameters are loaded
+  useEffect(() => {
+    if (sessionParams) {
+      setHandles(sessionParams.handles);
+      setTopic(sessionParams.topic);
+      setTone(sessionParams.tone);
+      setFormat(sessionParams.format);
+      setTweetCount(sessionParams.tweetCount);
+      setIncludeHashtags(sessionParams.includeHashtags);
+      setIncludeEmojis(sessionParams.includeEmojis);
+      setIncludeCTA(sessionParams.includeCTA);
+    }
+  }, [sessionParams]);
 
   // Redirect to auth if not authenticated - but only after loading is complete
   useEffect(() => {

@@ -24,6 +24,7 @@ interface TweetGenerationParams {
 export const useTweetGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTweets, setGeneratedTweets] = useState<GeneratedTweet[]>([]);
+  const [sessionParams, setSessionParams] = useState<TweetGenerationParams | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -51,12 +52,20 @@ export const useTweetGeneration = () => {
     setIsGenerating(true);
     
     try {
-      // Create a new session
+      // Create a new session with form parameters
       const { data: sessionData, error: sessionError } = await supabase
         .from('tweet_sessions')
         .insert([{
           user_id: user.id,
-          title: `${topic} - ${new Date().toLocaleDateString()}`
+          title: `${topic} - ${new Date().toLocaleDateString()}`,
+          handles: handles,
+          topic: topic,
+          tone: tone,
+          format: format,
+          tweet_count: tweetCount,
+          include_hashtags: includeHashtags,
+          include_emojis: includeEmojis,
+          include_cta: includeCTA
         }])
         .select()
         .single();
@@ -114,6 +123,7 @@ export const useTweetGeneration = () => {
       }));
 
       setGeneratedTweets(generatedTweets);
+      setSessionParams(params);
       
       toast({
         title: "Tweets Generated!",
@@ -136,6 +146,18 @@ export const useTweetGeneration = () => {
 
   const loadSession = async (sessionId: string) => {
     try {
+      // Load session data with form parameters
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('tweet_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) {
+        console.error('Error loading session:', sessionError);
+        throw sessionError;
+      }
+
       // Load tweets for the session
       const { data: tweetsData, error: tweetsError } = await supabase
         .from('generated_tweets')
@@ -154,7 +176,22 @@ export const useTweetGeneration = () => {
         type: tweet.type as 'single' | 'thread'
       })) || [];
 
+      // Extract session parameters
+      const params: TweetGenerationParams = {
+        handles: sessionData.handles || [''],
+        topic: sessionData.topic || '',
+        tone: sessionData.tone || '',
+        format: sessionData.format || 'single',
+        tweetCount: sessionData.tweet_count || 3,
+        includeHashtags: sessionData.include_hashtags || false,
+        includeEmojis: sessionData.include_emojis || false,
+        includeCTA: sessionData.include_cta || false
+      };
+
       setGeneratedTweets(tweets);
+      setSessionParams(params);
+      
+      return params;
     } catch (error) {
       console.error('Error loading session:', error);
       toast({
@@ -162,12 +199,14 @@ export const useTweetGeneration = () => {
         description: "Failed to load session.",
         variant: "destructive"
       });
+      return null;
     }
   };
 
   return {
     isGenerating,
     generatedTweets,
+    sessionParams,
     generateTweets,
     loadSession,
     setGeneratedTweets
