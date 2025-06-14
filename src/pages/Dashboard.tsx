@@ -125,7 +125,8 @@ const Dashboard = () => {
   };
 
   const handleNewSession = () => {
-    console.log("Creating new session");
+    console.log("Creating new session from dashboard");
+    // Navigate to clean tweet generator page
     navigate("/tweet-generator");
   };
 

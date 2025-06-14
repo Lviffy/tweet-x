@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,14 +46,30 @@ const TweetGenerator = () => {
   const [includeCTA, setIncludeCTA] = useState(false);
   const { toast } = useToast();
 
-  const { isGenerating, generatedTweets, generateTweets, loadSession } = useTweetGeneration();
+  const { isGenerating, generatedTweets, generateTweets, loadSession, setGeneratedTweets } = useTweetGeneration();
+
+  // Reset form when sessionId changes or is removed
+  useEffect(() => {
+    if (!sessionId) {
+      // Reset all form fields for new session
+      setHandles(['']);
+      setTopic('');
+      setTone('');
+      setFormat('single');
+      setTweetCount(3);
+      setIncludeHashtags(false);
+      setIncludeEmojis(false);
+      setIncludeCTA(false);
+      setGeneratedTweets([]);
+    }
+  }, [sessionId, setGeneratedTweets]);
 
   // Load session if sessionId is provided
   useEffect(() => {
     if (sessionId) {
       loadSession(sessionId);
     }
-  }, [sessionId]);
+  }, [sessionId, loadSession]);
 
   // Redirect to auth if not authenticated - but only after loading is complete
   useEffect(() => {
@@ -81,7 +96,7 @@ const TweetGenerator = () => {
     });
 
     if (newSessionId && !sessionId) {
-      navigate(`/tweet-generator/${newSessionId}`);
+      navigate(`/tweet-generator/${newSessionId}`, { replace: true });
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -89,7 +88,10 @@ export const TweetGeneratorSidebar = () => {
   };
 
   const handleNewSession = () => {
-    navigate("/tweet-generator");
+    // Navigate to tweet generator without session ID to create new session
+    navigate("/tweet-generator", { replace: true });
+    // Force a page refresh to reset all state
+    window.location.href = "/tweet-generator";
   };
 
   const handleSessionClick = (sessionId: string) => {
