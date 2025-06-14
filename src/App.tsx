@@ -9,6 +9,7 @@ import TweetGenerator from "./pages/TweetGenerator";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -20,9 +21,30 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/tweet-generator" element={<TweetGenerator />} />
-          <Route path="/tweet-generator/:sessionId" element={<TweetGenerator />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route 
+            path="/tweet-generator" 
+            element={
+              <ProtectedRoute>
+                <TweetGenerator />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tweet-generator/:sessionId" 
+            element={
+              <ProtectedRoute>
+                <TweetGenerator />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/auth" element={<AuthPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

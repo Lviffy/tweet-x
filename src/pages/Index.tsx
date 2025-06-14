@@ -1,46 +1,71 @@
 
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SparkleBackground from "@/components/SparkleBackground";
-import { useEffect } from "react";
 
 const Index = () => {
-  useEffect(() => {
-    // Initialize Unicorn Studio when component mounts
-    if (window.UnicornStudio) {
-      window.UnicornStudio.init().catch((err: any) => {
-        console.error("Failed to initialize Unicorn Studio:", err);
-      });
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate("/tweet-generator");
+    } else {
+      navigate("/auth");
     }
-  }, []);
+  };
+
+  const handleDashboard = () => {
+    navigate("/dashboard");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-gray-900/20 relative overflow-hidden">
-      {/* Unicorn Studio Background */}
-      <div 
-        className="absolute inset-0 w-full h-full z-0"
-        data-us-project="XxlOGeJnIdiCdlKJSD63"
-        data-us-scale="1"
-        data-us-dpi="1.5"
-        data-us-lazyload="true"
-        data-us-disablemobile="true"
-        data-us-alttext="Animated background"
-        data-us-arialabel="Interactive animated background scene"
-        style={{ width: '100%', height: '100%' }}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-gray-900/20">
+      <SparkleBackground />
+      <Header />
       
-      {/* Bottom center glow effect */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[500px] h-[350px] bg-gradient-to-t from-white/20 via-white/10 to-transparent blur-3xl opacity-80 pointer-events-none z-10"></div>
-      
-      {/* Header */}
-      <div className="relative z-20">
-        <Header />
-      </div>
-      
-      {/* Hero Section */}
-      <div className="relative z-20">
+      <main className="container mx-auto px-6 py-12 pt-24">
         <HeroSection />
-      </div>
+        
+        <div className="text-center mt-12 space-y-6">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={handleGetStarted}
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transform transition hover:scale-105"
+            >
+              {user ? "Start Generating" : "Get Started"}
+            </Button>
+            
+            {user && (
+              <Button 
+                onClick={handleDashboard}
+                size="lg"
+                variant="outline"
+                className="border-2 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white font-semibold px-8 py-3 rounded-lg shadow-lg transform transition hover:scale-105"
+              >
+                Dashboard
+              </Button>
+            )}
+          </div>
+          
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Create engaging tweets effortlessly with our AI-powered generator. 
+            Perfect for content creators, marketers, and social media enthusiasts.
+          </p>
+        </div>
+      </main>
     </div>
   );
 };
