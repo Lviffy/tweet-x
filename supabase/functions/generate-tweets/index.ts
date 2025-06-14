@@ -42,10 +42,10 @@ serve(async (req) => {
 
     let formatPrompt = ""
     if (format === 'single') {
-      formatPrompt = "Create a single tweet (max 280 characters) optimized for maximum engagement."
+      formatPrompt = "Create single tweets (max 280 characters each) optimized for maximum engagement."
     } else if (format.startsWith('thread')) {
       const threadLength = format.split('-')[1]
-      formatPrompt = `Create a ${threadLength}-tweet thread. Start with a compelling hook in the first tweet. Number each tweet (1/${threadLength}, 2/${threadLength}, etc.). Each tweet should build narrative tension and provide value.`
+      formatPrompt = `Create ${threadLength}-tweet threads. Start each thread with a compelling hook in the first tweet. Number each tweet (1/${threadLength}, 2/${threadLength}, etc.). Each tweet should build narrative tension and provide value. Separate tweets in a thread with "---" on its own line.`
     }
 
     let optionsPrompt = ""
@@ -99,7 +99,7 @@ Tone: ${toneMap[tone] || tone}
 ${viralStrategies}
 
 CONTENT REQUIREMENTS:
-- Each tweet must have viral potential with high engagement probability
+- Each tweet/thread must have viral potential with high engagement probability
 - Use psychological triggers that make people want to share
 - Include specific, concrete details rather than generic statements
 - Create content that sparks discussion and replies
@@ -107,22 +107,36 @@ CONTENT REQUIREMENTS:
 - Ensure content is valuable, entertaining, or thought-provoking
 - Avoid generic advice - be specific and actionable
 
-Generate ${tweetCount} different high-quality variations. Each should use different viral strategies and engagement tactics.
+Generate exactly ${tweetCount} different high-quality variations. Each should use different viral strategies and engagement tactics.
 
 CRITICAL FORMATTING RULES:
 - Do NOT include any labels like "Variation 1:", "Tweet 1:", "Option A:", etc.
 - Do NOT include explanatory text or commentary
 - Return ONLY the tweet content
-- Separate each variation with exactly one blank line
-- For threads, separate tweets with "---" on its own line
+- For single tweets: Separate each variation with exactly three newlines (\n\n\n)
+- For threads: Separate tweets within a thread with "---" on its own line, and separate thread variations with exactly three newlines (\n\n\n)
 - Make each variation distinctly different in approach and style
 
 Example format for single tweets:
-This is a viral tweet with strong hook and emotional trigger.
+First viral tweet with strong hook and emotional trigger.
 
-This is another viral tweet with different angle and curiosity gap.
+Second viral tweet with different angle and curiosity gap.
 
-This is a third viral tweet with contrarian take and social proof.`
+Third viral tweet with contrarian take and social proof.
+
+Example format for threads:
+First thread hook tweet 1/3
+---
+Second tweet building tension 2/3
+---
+Third tweet with payoff 3/3
+
+
+Second thread with different hook 1/3
+---
+Different approach middle tweet 2/3
+---
+Different conclusion 3/3`
 
     console.log(`Calling Gemini API to generate ${tweetCount} viral tweets`)
 
@@ -139,10 +153,10 @@ This is a third viral tweet with contrarian take and social proof.`
           }]
         }],
         generationConfig: {
-          temperature: 0.9, // Higher creativity for viral content
+          temperature: 0.9,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 3000, // More tokens for multiple variations
+          maxOutputTokens: 4000,
           candidateCount: 1
         },
         safetySettings: [
@@ -165,7 +179,7 @@ This is a third viral tweet with contrarian take and social proof.`
     }
 
     const geminiData = await geminiResponse.json()
-    console.log('Gemini response:', JSON.stringify(geminiData, null, 2))
+    console.log('Gemini response received')
 
     if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content) {
       console.error('Invalid Gemini response structure:', geminiData)
@@ -173,40 +187,55 @@ This is a third viral tweet with contrarian take and social proof.`
     }
 
     const generatedContent = geminiData.candidates[0].content.parts[0].text
+    console.log('Raw generated content:', generatedContent)
 
-    // Enhanced content cleaning and parsing
-    const cleanContent = generatedContent
-      .replace(/\*\*(Variation|Tweet|Option)\s*\d+:?\*\*/gi, '') // Remove bold variation labels
-      .replace(/(Variation|Tweet|Option)\s*\d+:?/gi, '') // Remove variation labels
-      .replace(/^\d+[\.\)]\s*/gm, '') // Remove numbered list formatting
-      .replace(/^[\-\*\+]\s*/gm, '') // Remove bullet points
-      .replace(/^-{3,}$/gm, '---') // Normalize thread separators
-      .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
-      .trim()
-
-    console.log('Cleaned content:', cleanContent)
-
-    // Split by double newlines and filter out empty or invalid content
-    const variations = cleanContent
-      .split(/\n\s*\n/)
-      .map(v => v.trim())
-      .filter(v => {
-        // Filter out short, invalid, or label-containing content
-        return v.length > 10 && 
-               !v.match(/^-+$/) && 
-               !v.toLowerCase().includes('variation') &&
-               !v.toLowerCase().includes('tweet:') &&
-               !v.toLowerCase().includes('example') &&
-               !v.toLowerCase().includes('here are') &&
-               !v.match(/^\d+[\.\)]/)
+    // Enhanced content parsing for both single tweets and threads
+    let tweets = []
+    
+    if (format === 'single') {
+      // For single tweets, split by triple newlines
+      const variations = generatedContent
+        .split(/\n\s*\n\s*\n/)
+        .map(v => v.trim())
+        .filter(v => v.length > 10 && !v.toLowerCase().includes('variation') && !v.toLowerCase().includes('example'))
+        .slice(0, tweetCount)
+      
+      tweets = variations.map((content, index) => ({
+        id: crypto.randomUUID(),
+        content: content,
+        type: 'single' as const
+      }))
+    } else {
+      // For threads, split by triple newlines to get thread variations
+      const threadVariations = generatedContent
+        .split(/\n\s*\n\s*\n/)
+        .map(v => v.trim())
+        .filter(v => v.length > 10)
+        .slice(0, tweetCount)
+      
+      // Process each thread variation
+      threadVariations.forEach((threadContent, threadIndex) => {
+        const threadTweets = threadContent
+          .split(/\n---\n|\n--\n/)
+          .map(tweet => tweet.trim())
+          .filter(tweet => tweet.length > 5)
+        
+        // Add each tweet in the thread
+        threadTweets.forEach((tweetContent, tweetIndex) => {
+          tweets.push({
+            id: crypto.randomUUID(),
+            content: tweetContent,
+            type: 'thread' as const
+          })
+        })
       })
-      .slice(0, tweetCount) // Ensure we only get the requested number
+    }
 
-    console.log(`Final variations (${variations.length}):`, variations)
+    console.log(`Successfully parsed ${tweets.length} tweets from ${tweetCount} requested variations`)
 
-    // Enhanced fallback content if parsing fails
-    if (variations.length === 0) {
-      console.error('No valid variations found, using fallback content')
+    // Fallback if parsing fails
+    if (tweets.length === 0) {
+      console.log('Parsing failed, using fallback content')
       const fallbackTemplates = [
         `🚀 Just shipped a new feature that took 6 months to build.\n\nTurns out users needed something completely different.\n\nBuilding in public teaches you humility real quick.`,
         `The biggest mistake I made as a founder:\n\nListening to everyone's advice.\n\nSometimes you need to trust your gut and ignore the noise.`,
@@ -216,34 +245,16 @@ This is a third viral tweet with contrarian take and social proof.`
         `3 years of "overnight success":\n\n• 47 failed prototypes\n• 12 pivots\n• 1 breakthrough\n\nSuccess is just failure with persistence.`,
         `Your competition isn't other startups.\n\nIt's the status quo.\n\nMost people prefer broken familiar over perfect unknown.`,
         `Technical debt is like credit card debt.\n\nFeels great at first.\n\nThen it compounds and kills you.`
-      ];
+      ]
       
-      const tweets = fallbackTemplates.slice(0, tweetCount).map((content, index) => ({
+      tweets = fallbackTemplates.slice(0, tweetCount).map((content, index) => ({
         id: crypto.randomUUID(),
         content: content,
         type: format.startsWith('thread') ? 'thread' as const : 'single' as const
       }))
-
-      return new Response(
-        JSON.stringify({ tweets }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
-      )
     }
 
-    const tweets = variations.map((variation, index) => {
-      return {
-        id: crypto.randomUUID(),
-        content: variation,
-        type: format.startsWith('thread') ? 'thread' as const : 'single' as const
-      }
-    })
-
-    console.log(`Generated ${tweets.length} viral tweets:`, tweets)
+    console.log(`Final result: Generated ${tweets.length} tweets`)
 
     return new Response(
       JSON.stringify({ tweets }),
