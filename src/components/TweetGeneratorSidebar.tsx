@@ -29,10 +29,14 @@ export const TweetGeneratorSidebar = () => {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      // Using raw SQL to avoid type issues until database types are regenerated
-      const { data, error } = await supabase.rpc('get_user_sessions', {
-        user_uuid: user?.id
-      });
+      
+      // Direct query to tweet_sessions table
+      const { data, error } = await supabase
+        .from('tweet_sessions')
+        .select('id, title, created_at')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (error) {
         console.error('Error fetching sessions:', error);
