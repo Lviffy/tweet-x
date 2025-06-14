@@ -72,9 +72,21 @@ ${stylePrompt} ${formatPrompt} ${optionsPrompt}
 Topic: ${topic}
 Tone: ${toneMap[tone] || tone}
 
-Generate 3 different variations. For threads, separate each tweet with "---" and number them properly.
+Generate 3 different variations. Each variation should be a complete, standalone tweet or thread.
 
-Return only the tweet content, no additional commentary.`
+IMPORTANT: 
+- Do NOT include variation labels like "Variation 1:", "Option 1:", etc.
+- Do NOT include explanatory text or commentary
+- Return ONLY the tweet content
+- Separate each variation with a blank line
+- For threads, separate each tweet with "---" and number them properly
+
+Example format:
+This is the first tweet variation about the topic.
+
+This is the second tweet variation with a different approach.
+
+This is the third tweet variation with another angle.`
 
     console.log('Calling Gemini API with prompt:', prompt)
 
@@ -115,9 +127,29 @@ Return only the tweet content, no additional commentary.`
 
     const generatedContent = geminiData.candidates[0].content.parts[0].text
 
-    // Parse the generated content into individual tweets
-    const variations = generatedContent.split('\n\n').filter(v => v.trim())
-    
+    // Clean and parse the generated content
+    const cleanContent = generatedContent
+      .replace(/\*\*Variation \d+:\*\*/g, '') // Remove variation labels
+      .replace(/Variation \d+:/g, '') // Remove variation labels without asterisks
+      .replace(/Option \d+:/g, '') // Remove option labels
+      .replace(/^\d+\.\s*/gm, '') // Remove numbered list formatting
+      .replace(/^-+$/gm, '') // Remove standalone dashes
+      .trim()
+
+    // Split by double newlines and filter out empty or very short content
+    const variations = cleanContent
+      .split(/\n\s*\n/)
+      .map(v => v.trim())
+      .filter(v => v.length > 5 && !v.match(/^-+$/) && !v.toLowerCase().includes('variation'))
+      .slice(0, 3) // Ensure we only get 3 variations
+
+    console.log('Cleaned variations:', variations)
+
+    // If we don't have enough valid variations, create fallback content
+    if (variations.length === 0) {
+      throw new Error('No valid tweet content generated')
+    }
+
     const tweets = variations.map((variation, index) => {
       if (format.startsWith('thread')) {
         return {
