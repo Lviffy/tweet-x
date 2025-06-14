@@ -232,7 +232,7 @@ const TweetGenerator = () => {
                       <Checkbox
                         id="hashtags"
                         checked={includeHashtags}
-                        onCheckedChange={setIncludeHashtags}
+                        onCheckedChange={(checked) => setIncludeHashtags(checked === true)}
                       />
                       <Label htmlFor="hashtags">Include Hashtags</Label>
                     </div>
@@ -240,7 +240,7 @@ const TweetGenerator = () => {
                       <Checkbox
                         id="emojis"
                         checked={includeEmojis}
-                        onCheckedChange={setIncludeEmojis}
+                        onCheckedChange={(checked) => setIncludeEmojis(checked === true)}
                       />
                       <Label htmlFor="emojis">Include Emojis</Label>
                     </div>
@@ -248,7 +248,7 @@ const TweetGenerator = () => {
                       <Checkbox
                         id="cta"
                         checked={includeCTA}
-                        onCheckedChange={setIncludeCTA}
+                        onCheckedChange={(checked) => setIncludeCTA(checked === true)}
                       />
                       <Label htmlFor="cta">Add Call-to-Action</Label>
                     </div>
