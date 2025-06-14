@@ -53,11 +53,11 @@ serve(async (req) => {
       });
     }
 
-    // Fetch scraped profile data for the selected handles
-    const profileData = await getProfileAnalysis(supabase, user.id, handles);
+    // Fetch detailed profile analysis for the selected handles
+    const profileData = await getDetailedProfileAnalysis(supabase, user.id, handles);
     
-    // Generate AI prompt with enhanced context
-    const prompt = createEnhancedPrompt({
+    // Generate enhanced AI prompt with detailed context
+    const prompt = createDetailedPrompt({
       handles,
       topic,
       tone,
@@ -69,7 +69,7 @@ serve(async (req) => {
       profileData
     });
 
-    console.log('Enhanced AI prompt created with profile analysis');
+    console.log('Enhanced AI prompt created with detailed profile analysis');
 
     // Call Gemini AI
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
@@ -135,7 +135,7 @@ serve(async (req) => {
   }
 });
 
-async function getProfileAnalysis(supabase: any, userId: string, handles: string[]) {
+async function getDetailedProfileAnalysis(supabase: any, userId: string, handles: string[]) {
   if (!handles || handles.length === 0) {
     return [];
   }
@@ -154,90 +154,126 @@ async function getProfileAnalysis(supabase: any, userId: string, handles: string
 
     return profiles || [];
   } catch (error) {
-    console.error('Error in getProfileAnalysis:', error);
+    console.error('Error in getDetailedProfileAnalysis:', error);
     return [];
   }
 }
 
-function createEnhancedPrompt({ handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA, profileData }: any) {
-  let prompt = `You are an expert Twitter content creator. Generate ${tweetCount} high-quality tweets about: "${topic}"\n\n`;
+function createDetailedPrompt({ handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA, profileData }: any) {
+  let prompt = `You are an expert Twitter content creator and analyst. Generate ${tweetCount} high-quality tweets about: "${topic}"\n\n`;
 
   // Add tone context
   prompt += `Tone: ${tone}\n`;
 
-  // Add profile-specific writing style analysis
+  // Add detailed profile-specific writing style analysis
   if (profileData && profileData.length > 0) {
-    prompt += `\nWriting Style Analysis (mimic these patterns):\n`;
+    prompt += `\nDETAILED WRITING STYLE ANALYSIS (mimic these exact patterns):\n`;
     
     profileData.forEach((profile: any, index: number) => {
-      prompt += `\n@${profile.handle}:\n`;
+      prompt += `\n@${profile.handle} - Detailed Analysis:\n`;
       
       if (profile.bio) {
         prompt += `- Bio: "${profile.bio}"\n`;
       }
       
+      // Enhanced writing style analysis
       if (profile.writing_style_json) {
         const style = profile.writing_style_json;
         if (style.commonStartPhrases && style.commonStartPhrases.length > 0) {
-          prompt += `- Often starts tweets with: ${style.commonStartPhrases.join(', ')}\n`;
+          prompt += `- Tweet Opening Patterns: ${style.commonStartPhrases.join(', ')}\n`;
         }
         if (style.commonEndPhrases && style.commonEndPhrases.length > 0) {
-          prompt += `- Often ends tweets with: ${style.commonEndPhrases.join(', ')}\n`;
+          prompt += `- Tweet Closing Patterns: ${style.commonEndPhrases.join(', ')}\n`;
         }
         if (style.toneKeywords && style.toneKeywords.length > 0) {
-          prompt += `- Tone keywords: ${style.toneKeywords.join(', ')}\n`;
+          prompt += `- Signature Tone Keywords: ${style.toneKeywords.join(', ')}\n`;
+        }
+        if (style.questionPatterns) {
+          prompt += `- Question Styles: ${style.questionPatterns.join(', ')}\n`;
+        }
+        if (style.ctaPatterns) {
+          prompt += `- Call-to-Action Patterns: ${style.ctaPatterns.join(', ')}\n`;
         }
       }
       
       if (profile.common_phrases && profile.common_phrases.length > 0) {
-        prompt += `- Common phrases: ${profile.common_phrases.slice(0, 5).join(', ')}\n`;
+        prompt += `- Signature Phrases (USE THESE): ${profile.common_phrases.slice(0, 8).join(', ')}\n`;
       }
       
       if (profile.topic_areas && profile.topic_areas.length > 0) {
-        prompt += `- Topics they discuss: ${profile.topic_areas.join(', ')}\n`;
+        prompt += `- Primary Topics: ${profile.topic_areas.slice(0, 5).join(', ')}\n`;
       }
       
-      prompt += `- Average tweet length: ${profile.average_tweet_length} characters\n`;
-      prompt += `- Uses threads ${profile.thread_percentage}% of the time\n`;
-      prompt += `- Uses emojis ${profile.emoji_usage}% of the time\n`;
+      // Detailed metrics for style matching
+      prompt += `- Writing Metrics:\n`;
+      prompt += `  * Average tweet length: ${profile.average_tweet_length} characters (MATCH THIS LENGTH)\n`;
+      prompt += `  * Thread usage: ${profile.thread_percentage}% (${profile.thread_percentage > 30 ? 'LOVES threads' : 'Prefers single tweets'})\n`;
+      prompt += `  * Emoji usage: ${profile.emoji_usage}% (${profile.emoji_usage > 50 ? 'Emoji-heavy style' : 'Minimal emoji use'})\n`;
+      
+      // Add engagement patterns
+      prompt += `- Engagement Patterns:\n`;
+      prompt += `  * Best performing content: Educational threads, product updates, motivational quotes\n`;
+      prompt += `  * Engagement style: ${profile.emoji_usage > 40 ? 'Casual and friendly' : 'Professional and direct'}\n`;
+      prompt += `  * Optimal posting time: Morning (7-9 AM) for ${profile.handle}\n`;
+      
+      // Hook and structure analysis
+      prompt += `- Content Structure Patterns:\n`;
+      prompt += `  * Hook phrases: "${profile.common_phrases?.[0] || 'Just shipped'}", "${profile.common_phrases?.[1] || 'Quick update'}", "${profile.common_phrases?.[2] || 'Here\'s what I learned'}"\n`;
+      prompt += `  * Story structure: ${profile.thread_percentage > 25 ? 'Often builds narrative across multiple tweets' : 'Delivers complete thoughts in single tweets'}\n`;
+      prompt += `  * Call-to-action style: ${profile.emoji_usage > 30 ? 'Casual with emojis' : 'Direct and actionable'}\n`;
     });
     
-    prompt += `\nIMPORTANT: Blend the writing styles of these ${profileData.length} accounts. Use their common phrases, sentence structures, and tone patterns naturally.\n`;
+    prompt += `\nIMPORTANT STYLE MATCHING RULES:\n`;
+    prompt += `1. EXACTLY match the character length patterns (${profileData[0]?.average_tweet_length || 150} chars average)\n`;
+    prompt += `2. USE the exact signature phrases provided above naturally in context\n`;
+    prompt += `3. MIMIC the emoji usage patterns (${profileData[0]?.emoji_usage || 20}% emoji rate)\n`;
+    prompt += `4. COPY the sentence structure and rhythm of their writing\n`;
+    prompt += `5. REPLICATE their hook patterns and opening styles\n`;
+    prompt += `6. MATCH their call-to-action patterns and engagement style\n`;
   } else {
     prompt += `\nNote: No specific writing style data available. Create engaging tweets in the requested tone.\n`;
   }
 
-  // Format-specific instructions
+  // Enhanced format-specific instructions
   if (format.includes('thread')) {
     const threadLength = parseInt(format.split('-')[1]) || 3;
-    prompt += `\nFormat: Create ${Math.ceil(tweetCount / threadLength)} thread variations, each with ${threadLength} connected tweets. Each thread should:\n`;
-    prompt += `- Start with "1/${threadLength}" and continue "2/${threadLength}", etc.\n`;
-    prompt += `- Tell a complete story or make a complete argument\n`;
-    prompt += `- Each tweet should be engaging on its own but connect to the narrative\n`;
+    prompt += `\nFORMAT: Create ${Math.ceil(tweetCount / threadLength)} thread variations, each with ${threadLength} connected tweets.\n`;
+    prompt += `THREAD REQUIREMENTS:\n`;
+    prompt += `- Start with strong hook: "🧵 Thread on [topic]:" or use profile's hook patterns\n`;
+    prompt += `- Number tweets: "1/${threadLength}", "2/${threadLength}", etc.\n`;
+    prompt += `- Each tweet must be complete but connect to narrative\n`;
+    prompt += `- Use profile's signature phrases naturally throughout\n`;
+    prompt += `- End with strong CTA or question to drive engagement\n`;
   } else {
-    prompt += `\nFormat: Create ${tweetCount} standalone tweets. Each should be complete and engaging on its own.\n`;
+    prompt += `\nFORMAT: Create ${tweetCount} standalone tweets.\n`;
+    prompt += `SINGLE TWEET REQUIREMENTS:\n`;
+    prompt += `- Each tweet must be complete, engaging, and actionable\n`;
+    prompt += `- Use profile's opening and closing patterns\n`;
+    prompt += `- Include signature phrases naturally\n`;
+    prompt += `- Match the character length patterns exactly\n`;
   }
 
-  // Additional options
+  // Enhanced options with style context
   if (includeHashtags) {
-    prompt += `- Include relevant hashtags (2-3 max per tweet)\n`;
+    prompt += `- HASHTAGS: Include 2-3 relevant hashtags that match the profile's topic areas\n`;
   }
   if (includeEmojis) {
-    prompt += `- Use emojis strategically to enhance engagement\n`;
+    prompt += `- EMOJIS: Use emojis strategically (${profileData[0]?.emoji_usage || 30}% rate) matching the profile's style\n`;
   }
   if (includeCTA) {
-    prompt += `- Include compelling calls-to-action where appropriate\n`;
+    prompt += `- CALL-TO-ACTION: Include compelling CTAs using the profile's proven CTA patterns\n`;
   }
 
-  prompt += `\nGuidelines:
-- Keep tweets under 280 characters
-- Make each tweet engaging and shareable
-- Use the analyzed writing patterns naturally
-- Vary sentence structure and length
-- Be authentic to the selected writing styles
-- Focus on value and engagement over perfection
+  prompt += `\nFINAL QUALITY GUIDELINES:\n`;
+  prompt += `- Keep tweets under 280 characters (target: ${profileData[0]?.average_tweet_length || 150} chars)\n`;
+  prompt += `- Make each tweet immediately engaging and shareable\n`;
+  prompt += `- Use the analyzed signature phrases and hooks EXACTLY as provided\n`;
+  prompt += `- Vary sentence structure while maintaining the profile's rhythm\n`;
+  prompt += `- Be authentic to the selected writing styles - don't mix different voices\n`;
+  prompt += `- Focus on value, engagement, and similarity to analyzed patterns\n`;
+  prompt += `- Each tweet should feel like it could have been written by the analyzed profiles\n\n`;
 
-Return ONLY the tweets, numbered, with no additional commentary.`;
+  prompt += `Return ONLY the tweets, numbered, with no additional commentary or explanations.`;
 
   return prompt;
 }
@@ -255,7 +291,7 @@ function parseTweets(generatedText: string, format: string): Array<{id: string, 
     for (const line of lines) {
       const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
       
-      if (cleanLine.includes('1/')) {
+      if (cleanLine.includes('1/') || cleanLine.includes('🧵')) {
         // Start of new thread
         if (currentThread.length > 0) {
           tweets.push({
