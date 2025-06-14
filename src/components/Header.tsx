@@ -26,6 +26,11 @@ const Header = () => {
     }
   };
 
+  const handleSignInClick = () => {
+    console.log("Sign In button clicked, navigating to /auth");
+    navigate("/auth");
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white border-b border-border/10">
       <div className="container mx-auto px-6 py-3">
@@ -71,7 +76,8 @@ const Header = () => {
             ) : (
               <Button 
                 className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition"
-                onClick={() => navigate("/auth")}
+                onClick={handleSignInClick}
+                type="button"
               >
                 Sign In
               </Button>
