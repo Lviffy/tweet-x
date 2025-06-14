@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ const TweetGenerator = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { user, loading } = useAuth();
-  const [handles, setHandles] = useState<string[]>(['']);
+  const [handles, setHandles] = useState<string[]>([]);  // Changed from [''] to []
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
   const [format, setFormat] = useState('single');
@@ -52,7 +53,7 @@ const TweetGenerator = () => {
   useEffect(() => {
     if (!sessionId) {
       // Reset all form fields for new session
-      setHandles(['']);
+      setHandles([]);  // Changed from [''] to []
       setTopic('');
       setTone('');
       setFormat('single');
@@ -74,7 +75,7 @@ const TweetGenerator = () => {
   // Update form fields when session parameters are loaded
   useEffect(() => {
     if (sessionParams) {
-      setHandles(sessionParams.handles);
+      setHandles(sessionParams.handles || []);  // Handle empty arrays properly
       setTopic(sessionParams.topic);
       setTone(sessionParams.tone);
       setFormat(sessionParams.format);

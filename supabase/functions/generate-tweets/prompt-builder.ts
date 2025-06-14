@@ -9,7 +9,7 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
   // Add tone context
   prompt += `Tone: ${tone}\n`;
 
-  // Add detailed profile-specific writing style analysis
+  // Handle profile-specific writing style analysis only if profiles are provided
   if (profileData && profileData.length > 0) {
     prompt += `\nDETAILED WRITING STYLE ANALYSIS (mimic these exact patterns):\n`;
     
@@ -75,7 +75,10 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
     prompt += `5. REPLICATE their hook patterns and opening styles\n`;
     prompt += `6. MATCH their call-to-action patterns and engagement style\n`;
   } else {
-    prompt += `\nNote: No specific writing style data available. Create engaging tweets in the requested tone.\n`;
+    prompt += `\nGENERAL WRITING STYLE GUIDELINES:\n`;
+    prompt += `Create original, engaging tweets in the "${tone}" tone without mimicking any specific writing style.\n`;
+    prompt += `Focus on clear, compelling content that matches the specified tone and topic.\n`;
+    prompt += `Use natural, authentic language appropriate for the chosen tone.\n`;
   }
 
   // Enhanced format-specific instructions
@@ -83,39 +86,62 @@ export function createDetailedPrompt(params: TweetGenerationRequest & { profileD
     const threadLength = parseInt(format.split('-')[1]) || 3;
     prompt += `\nFORMAT: Create ${Math.ceil(tweetCount / threadLength)} thread variations, each with ${threadLength} connected tweets.\n`;
     prompt += `THREAD REQUIREMENTS:\n`;
-    prompt += `- Start with strong hook: "🧵 Thread on [topic]:" or use profile's hook patterns\n`;
+    prompt += `- Start with strong hook: "🧵 Thread on [topic]:" or similar engaging opener\n`;
     prompt += `- Number tweets: "1/${threadLength}", "2/${threadLength}", etc.\n`;
     prompt += `- Each tweet must be complete but connect to narrative\n`;
-    prompt += `- Use profile's signature phrases naturally throughout\n`;
+    if (profileData && profileData.length > 0) {
+      prompt += `- Use profile's signature phrases naturally throughout\n`;
+    }
     prompt += `- End with strong CTA or question to drive engagement\n`;
   } else {
     prompt += `\nFORMAT: Create ${tweetCount} standalone tweets.\n`;
     prompt += `SINGLE TWEET REQUIREMENTS:\n`;
     prompt += `- Each tweet must be complete, engaging, and actionable\n`;
-    prompt += `- Use profile's opening and closing patterns\n`;
-    prompt += `- Include signature phrases naturally\n`;
-    prompt += `- Match the character length patterns exactly\n`;
+    if (profileData && profileData.length > 0) {
+      prompt += `- Use profile's opening and closing patterns\n`;
+      prompt += `- Include signature phrases naturally\n`;
+      prompt += `- Match the character length patterns exactly\n`;
+    } else {
+      prompt += `- Keep tweets concise and impactful (aim for 150-250 characters)\n`;
+      prompt += `- Use engaging hooks and clear calls-to-action\n`;
+    }
   }
 
   // Enhanced options with style context
   if (includeHashtags) {
-    prompt += `- HASHTAGS: Include 2-3 relevant hashtags that match the profile's topic areas\n`;
+    const hashtagGuidance = profileData && profileData.length > 0 
+      ? `Include 2-3 relevant hashtags that match the profile's topic areas` 
+      : `Include 2-3 relevant hashtags related to the topic and tone`;
+    prompt += `- HASHTAGS: ${hashtagGuidance}\n`;
   }
   if (includeEmojis) {
-    prompt += `- EMOJIS: Use emojis strategically (${profileData[0]?.emoji_usage || 30}% rate) matching the profile's style\n`;
+    const emojiGuidance = profileData && profileData.length > 0 
+      ? `Use emojis strategically (${profileData[0]?.emoji_usage || 30}% rate) matching the profile's style` 
+      : `Use emojis strategically to enhance engagement and tone`;
+    prompt += `- EMOJIS: ${emojiGuidance}\n`;
   }
   if (includeCTA) {
-    prompt += `- CALL-TO-ACTION: Include compelling CTAs using the profile's proven CTA patterns\n`;
+    const ctaGuidance = profileData && profileData.length > 0 
+      ? `Include compelling CTAs using the profile's proven CTA patterns` 
+      : `Include compelling calls-to-action appropriate for the tone and topic`;
+    prompt += `- CALL-TO-ACTION: ${ctaGuidance}\n`;
   }
 
   prompt += `\nFINAL QUALITY GUIDELINES:\n`;
-  prompt += `- Keep tweets under 280 characters (target: ${profileData[0]?.average_tweet_length || 150} chars)\n`;
+  prompt += `- Keep tweets under 280 characters\n`;
   prompt += `- Make each tweet immediately engaging and shareable\n`;
-  prompt += `- Use the analyzed signature phrases and hooks EXACTLY as provided\n`;
-  prompt += `- Vary sentence structure while maintaining the profile's rhythm\n`;
-  prompt += `- Be authentic to the selected writing styles - don't mix different voices\n`;
-  prompt += `- Focus on value, engagement, and similarity to analyzed patterns\n`;
-  prompt += `- Each tweet should feel like it could have been written by the analyzed profiles\n\n`;
+  if (profileData && profileData.length > 0) {
+    prompt += `- Use the analyzed signature phrases and hooks EXACTLY as provided\n`;
+    prompt += `- Vary sentence structure while maintaining the profile's rhythm\n`;
+    prompt += `- Be authentic to the selected writing styles - don't mix different voices\n`;
+    prompt += `- Each tweet should feel like it could have been written by the analyzed profiles\n`;
+  } else {
+    prompt += `- Create original, authentic content in the specified tone\n`;
+    prompt += `- Vary sentence structure while maintaining consistency\n`;
+    prompt += `- Focus on value, engagement, and clarity\n`;
+    prompt += `- Each tweet should be memorable and shareable\n`;
+  }
+  prompt += `- Focus on value, engagement, and similarity to analyzed patterns\n\n`;
 
   prompt += `Return ONLY the tweets, numbered, with no additional commentary or explanations.`;
 

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,10 +39,10 @@ export const useTweetGeneration = () => {
 
     const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = params;
 
-    if (!topic.trim() || !tone || handles.some(h => !h.trim())) {
+    if (!topic.trim() || !tone) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields.",
+        description: "Please fill in the topic and select a tone.",
         variant: "destructive"
       });
       return null;
@@ -125,9 +124,10 @@ export const useTweetGeneration = () => {
       setGeneratedTweets(generatedTweets);
       setSessionParams(params);
       
+      const mimicMessage = handles.length > 0 ? ` mimicking @${handles.join(', @')}` : '';
       toast({
         title: "Tweets Generated!",
-        description: `${generatedTweets.length} AI-generated tweets are ready.`
+        description: `${generatedTweets.length} AI-generated tweets are ready${mimicMessage}.`
       });
 
       return sessionData.id;

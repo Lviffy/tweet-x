@@ -41,9 +41,9 @@ const ProfileSelector = ({ selectedProfiles, onProfilesChange, maxProfiles = 3 }
   return (
     <div className="space-y-4">
       <div>
-        <Label>Select Writing Styles to Mimic (up to {maxProfiles})</Label>
+        <Label>Select Writing Styles to Mimic (Optional)</Label>
         <p className="text-sm text-muted-foreground mb-3">
-          Choose from your analyzed profiles or add new ones
+          Choose profiles to mimic their writing style, or leave empty to generate original content
         </p>
       </div>
 
@@ -63,11 +63,13 @@ const ProfileSelector = ({ selectedProfiles, onProfilesChange, maxProfiles = 3 }
         onDelete={deleteProfile}
       />
 
-      <SelectedProfilesBadges
-        selectedProfiles={selectedProfiles}
-        maxProfiles={maxProfiles}
-        onRemoveProfile={handleProfileSelect}
-      />
+      {selectedProfiles.length > 0 && (
+        <SelectedProfilesBadges
+          selectedProfiles={selectedProfiles}
+          maxProfiles={maxProfiles}
+          onRemoveProfile={handleProfileSelect}
+        />
+      )}
     </div>
   );
 };
