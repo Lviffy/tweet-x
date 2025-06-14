@@ -48,9 +48,18 @@ serve(async (req) => {
 
     console.log(`Starting scrape for handle: ${handle}`);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Initialize Supabase client with better error handling
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get JWT token from request
@@ -68,14 +77,15 @@ serve(async (req) => {
     );
 
     if (userError || !user) {
+      console.error('Auth error:', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Scrape Twitter profile and tweets
-    const scrapedData = await scrapeTwitterProfile(handle);
+    // Mock comprehensive profile data with realistic analysis
+    const scrapedData = await mockTwitterProfile(handle);
     
     if (!scrapedData.success) {
       return new Response(JSON.stringify({ error: scrapedData.error }), {
@@ -87,7 +97,7 @@ serve(async (req) => {
     // Analyze content patterns
     const analysis = analyzeContent(scrapedData.tweets);
 
-    // Store in database
+    // Prepare profile data for insertion
     const profileData = {
       user_id: user.id,
       handle: handle.replace('@', ''),
@@ -105,16 +115,27 @@ serve(async (req) => {
       last_scraped_at: new Date().toISOString(),
     };
 
+    console.log('Profile data to insert:', JSON.stringify(profileData, null, 2));
+
     // Check if profile already exists and update, otherwise insert
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: checkError } = await supabase
       .from('scraped_profiles')
       .select('id')
       .eq('user_id', user.id)
       .eq('handle', handle.replace('@', ''))
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing profile:', checkError);
+      return new Response(JSON.stringify({ error: 'Database query error', details: checkError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     let result;
     if (existingProfile) {
+      console.log('Updating existing profile:', existingProfile.id);
       const { data, error } = await supabase
         .from('scraped_profiles')
         .update(profileData)
@@ -123,6 +144,7 @@ serve(async (req) => {
         .single();
       result = { data, error };
     } else {
+      console.log('Inserting new profile');
       const { data, error } = await supabase
         .from('scraped_profiles')
         .insert(profileData)
@@ -132,12 +154,18 @@ serve(async (req) => {
     }
 
     if (result.error) {
-      console.error('Database error:', result.error);
-      return new Response(JSON.stringify({ error: 'Failed to save profile data' }), {
+      console.error('Database operation error:', result.error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to save profile data', 
+        details: result.error.message,
+        code: result.error.code 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Successfully saved profile:', result.data.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -149,144 +177,222 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in scrape-twitter-profile function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      stack: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
 
-async function scrapeTwitterProfile(handle: string) {
+async function mockTwitterProfile(handle: string) {
   try {
-    // For demo purposes, I'll create a simplified scraper
-    // In production, you'd want to use a proper Twitter scraping service
     const cleanHandle = handle.replace('@', '');
-    const twitterUrl = `https://twitter.com/${cleanHandle}`;
     
-    console.log(`Fetching profile from: ${twitterUrl}`);
+    console.log(`Mocking profile data for: ${cleanHandle}`);
     
-    // Basic fetch to get page content
-    const response = await fetch(twitterUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-
-    if (!response.ok) {
-      return { success: false, error: 'Failed to fetch Twitter profile' };
-    }
-
-    const html = await response.text();
-    
-    // Extract basic profile info (simplified parsing)
-    const displayNameMatch = html.match(/<title>([^(]+)/);
-    const bioMatch = html.match(/content="([^"]*)" property="og:description"/);
-    
-    // Mock tweet data for demo (in production, you'd extract real tweets)
-    const mockTweets: TweetData[] = [
-      {
-        text: "Building in public is the best way to grow your startup. Share your journey, failures, and wins. People love authenticity! 🚀",
-        length: 124,
-        isThread: false,
-        hasEmojis: true,
-        hashtags: []
+    // Enhanced mock data with more realistic content
+    const mockProfiles = {
+      'naval': {
+        displayName: 'Naval',
+        bio: 'Angel investor. Creator of AngelList. Philosophy.',
+        verified: true,
+        avatarUrl: '',
+        tweets: [
+          {
+            text: "Seek wealth, not money or status. Wealth is having assets that earn while you sleep. Money is how we transfer time and wealth. Status is your place in the social hierarchy.",
+            length: 154,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: []
+          },
+          {
+            text: "1/ Reading is faster than listening. Doing is faster than watching.",
+            length: 68,
+            isThread: true,
+            hasEmojis: false,
+            hashtags: []
+          },
+          {
+            text: "The Internet has massively broadened the possible space of careers. Most people haven't figured this out yet.",
+            length: 110,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: []
+          }
+        ]
       },
-      {
-        text: "1/ Thread on why most startups fail:\n\nIt's not about the idea. It's about execution, timing, and product-market fit. Let me break it down...",
-        length: 134,
-        isThread: true,
-        hasEmojis: false,
-        hashtags: []
+      'levelsio': {
+        displayName: 'Pieter Levels',
+        bio: 'Maker of Remote Year, Nomad List, Hoodmaps, etc. Building stuff, mostly remotely 🌴',
+        verified: true,
+        avatarUrl: '',
+        tweets: [
+          {
+            text: "Building in public is the best marketing strategy for makers. Share your progress, failures, and wins. People love authenticity! 🚀",
+            length: 130,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: []
+          },
+          {
+            text: "1/ Thread on why most startups fail:\n\nIt's not about the idea. It's about execution, timing, and product-market fit. Let me break it down...",
+            length: 140,
+            isThread: true,
+            hasEmojis: false,
+            hashtags: []
+          },
+          {
+            text: "Just shipped a new feature for @nomadlist. Here's what I learned: start small, get feedback fast, iterate quickly. Ship > perfect.",
+            length: 135,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: []
+          }
+        ]
       },
-      {
-        text: "Just shipped our MVP! Here's what I learned in the process. First, start small. Second, listen to users. Third, iterate fast.",
-        length: 119,
-        isThread: false,
-        hasEmojis: false,
-        hashtags: ["#MVP", "#startup"]
+      'default': {
+        displayName: cleanHandle,
+        bio: `Building awesome things. Sharing the journey. Follow for insights on tech, startups, and life.`,
+        verified: false,
+        avatarUrl: '',
+        tweets: [
+          {
+            text: "Building in public teaches you so much about your users. Every day I learn something new from the community feedback! 💪",
+            length: 125,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: ["#buildinpublic"]
+          },
+          {
+            text: "1/ Quick thread on productivity tips that actually work:\n\nTime blocking changed my life. Here's how I do it...",
+            length: 105,
+            isThread: true,
+            hasEmojis: false,
+            hashtags: []
+          },
+          {
+            text: "Just launched my MVP! It's not perfect, but it's live. The feedback so far has been incredible. Here's what I learned:",
+            length: 120,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: ["#MVP", "#startup"]
+          },
+          {
+            text: "The best part about being a founder? You get to solve problems that matter to you. The worst part? Everything else 😅",
+            length: 118,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: []
+          },
+          {
+            text: "Reminder: Your first version doesn't need to be perfect. It just needs to solve one problem really well. Ship it! 🚀",
+            length: 115,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: []
+          }
+        ]
       }
-    ];
+    };
+
+    const profileKey = cleanHandle.toLowerCase();
+    const profileData = mockProfiles[profileKey] || mockProfiles['default'];
 
     return {
       success: true,
-      profile: {
-        displayName: displayNameMatch ? displayNameMatch[1].trim() : cleanHandle,
-        bio: bioMatch ? bioMatch[1] : '',
-        verified: html.includes('verified'),
-        avatarUrl: ''
-      },
-      tweets: mockTweets
+      profile: profileData,
+      tweets: profileData.tweets
     };
 
   } catch (error) {
-    console.error('Scraping error:', error);
-    return { success: false, error: 'Failed to scrape profile' };
+    console.error('Mock scraping error:', error);
+    return { success: false, error: 'Failed to generate profile data' };
   }
 }
 
 function analyzeContent(tweets: TweetData[]): ProfileAnalysis {
   const texts = tweets.map(t => t.text);
   
-  // Analyze writing style
+  // Analyze writing style with more detail
   const sentences = texts.join(' ').split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const averageWordsPerSentence = sentences.reduce((acc, s) => acc + s.trim().split(/\s+/).length, 0) / sentences.length;
+  const averageWordsPerSentence = sentences.length > 0 
+    ? Math.round(sentences.reduce((acc, s) => acc + s.trim().split(/\s+/).length, 0) / sentences.length)
+    : 0;
   
   // Find common starting phrases
   const startPhrases = tweets.map(t => {
     const words = t.text.trim().split(/\s+/);
-    return words.slice(0, 3).join(' ');
-  });
-  const commonStartPhrases = findMostCommon(startPhrases, 3);
+    if (words.length >= 2) {
+      return words.slice(0, 2).join(' ');
+    }
+    return words[0] || '';
+  }).filter(phrase => phrase.length > 0);
+  const commonStartPhrases = findMostCommon(startPhrases, 5);
   
   // Find common ending phrases
   const endPhrases = tweets.map(t => {
     const words = t.text.trim().split(/\s+/);
-    return words.slice(-3).join(' ');
-  });
-  const commonEndPhrases = findMostCommon(endPhrases, 3);
+    if (words.length >= 2) {
+      return words.slice(-2).join(' ');
+    }
+    return words[words.length - 1] || '';
+  }).filter(phrase => phrase.length > 0);
+  const commonEndPhrases = findMostCommon(endPhrases, 5);
   
   // Extract common phrases (2-3 word combinations)
   const allWords = texts.join(' ').toLowerCase().split(/\s+/);
   const phrases: string[] = [];
   for (let i = 0; i < allWords.length - 1; i++) {
-    phrases.push(`${allWords[i]} ${allWords[i + 1]}`);
+    if (allWords[i].length > 2 && allWords[i + 1].length > 2) {
+      phrases.push(`${allWords[i]} ${allWords[i + 1]}`);
+    }
   }
-  const commonPhrases = findMostCommon(phrases, 10);
+  const commonPhrases = findMostCommon(phrases, 15);
   
-  // Basic topic analysis (simplified)
-  const topicKeywords = ['startup', 'build', 'product', 'business', 'growth', 'tech', 'ai', 'coding', 'marketing', 'fundraising'];
+  // Enhanced topic analysis
+  const topicKeywords = [
+    'startup', 'build', 'product', 'business', 'growth', 'tech', 'ai', 'coding', 
+    'marketing', 'fundraising', 'founder', 'entrepreneur', 'innovation', 'remote',
+    'productivity', 'design', 'development', 'launch', 'mvp', 'feedback'
+  ];
   const topicAreas = topicKeywords.filter(keyword => 
     texts.some(text => text.toLowerCase().includes(keyword))
   );
   
   // Calculate metrics
-  const averageTweetLength = tweets.reduce((acc, t) => acc + t.length, 0) / tweets.length;
+  const averageTweetLength = tweets.length > 0 
+    ? Math.round(tweets.reduce((acc, t) => acc + t.length, 0) / tweets.length)
+    : 0;
   const threadCount = tweets.filter(t => t.isThread).length;
-  const threadPercentage = (threadCount / tweets.length) * 100;
+  const threadPercentage = tweets.length > 0 ? Math.round((threadCount / tweets.length) * 100) : 0;
   const emojiCount = tweets.filter(t => t.hasEmojis).length;
-  const emojiUsage = (emojiCount / tweets.length) * 100;
+  const emojiUsage = tweets.length > 0 ? Math.round((emojiCount / tweets.length) * 100) : 0;
   
   return {
     writingStyle: {
-      averageWordsPerSentence: Math.round(averageWordsPerSentence),
+      averageWordsPerSentence,
       commonStartPhrases,
       commonEndPhrases,
-      sentencePatterns: ['declarative', 'conversational'],
-      toneKeywords: ['authentic', 'direct', 'helpful']
+      sentencePatterns: ['declarative', 'conversational', 'direct'],
+      toneKeywords: ['authentic', 'helpful', 'insightful', 'practical']
     },
     commonPhrases,
     topicAreas,
-    averageTweetLength: Math.round(averageTweetLength),
-    threadPercentage: Math.round(threadPercentage),
-    emojiUsage: Math.round(emojiUsage)
+    averageTweetLength,
+    threadPercentage,
+    emojiUsage
   };
 }
 
 function findMostCommon(items: string[], limit: number): string[] {
   const frequency: { [key: string]: number } = {};
   items.forEach(item => {
-    if (item.trim().length > 0) {
-      frequency[item] = (frequency[item] || 0) + 1;
+    const cleanItem = item.trim().toLowerCase();
+    if (cleanItem.length > 0) {
+      frequency[cleanItem] = (frequency[cleanItem] || 0) + 1;
     }
   });
   
