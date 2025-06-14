@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, RefreshCw, Trash2, User, Calendar, TrendingUp } from "lucide-react";
+import { Plus, RefreshCw, Trash2, User, Calendar, TrendingUp, Eye } from "lucide-react";
 import { useScrapedProfiles } from "@/hooks/useScrapedProfiles";
+import ProfileDetailView from "./ProfileDetailView";
 
 interface ProfileSelectorProps {
   selectedProfiles: string[];
@@ -132,18 +133,20 @@ const ProfileSelector = ({ selectedProfiles, onProfilesChange, maxProfiles = 3 }
             return (
               <Card 
                 key={profile.id} 
-                className={`cursor-pointer transition-all ${
+                className={`transition-all ${
                   isSelected 
                     ? 'ring-2 ring-primary bg-primary/5' 
                     : canSelect 
                       ? 'hover:shadow-md' 
                       : 'opacity-50'
                 }`}
-                onClick={() => canSelect || isSelected ? handleProfileSelect(profile.handle) : null}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
+                    <div 
+                      className="flex items-start gap-3 flex-1 cursor-pointer"
+                      onClick={() => canSelect || isSelected ? handleProfileSelect(profile.handle) : null}
+                    >
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={profile.avatar_url || ''} />
                         <AvatarFallback>
@@ -202,6 +205,15 @@ const ProfileSelector = ({ selectedProfiles, onProfilesChange, maxProfiles = 3 }
                     </div>
                     
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <ProfileDetailView profile={profile}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                      </ProfileDetailView>
                       <Button
                         variant="ghost"
                         size="sm"
