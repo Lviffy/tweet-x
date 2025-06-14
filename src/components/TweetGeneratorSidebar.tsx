@@ -1,139 +1,125 @@
 
-import React from "react";
-import { NavLink } from "react-router-dom";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { 
-  Home, 
-  Plus, 
-  History, 
-  User, 
-  Settings,
-  FileText,
-  Clock
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { MessageSquare, Plus, Home, Settings } from "lucide-react";
 
-interface TweetSession {
+interface Session {
   id: string;
   title: string;
   created_at: string;
-  topic: string;
 }
 
-export function TweetGeneratorSidebar() {
-  const { state } = useSidebar();
+export const TweetGeneratorSidebar = () => {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const { data: sessions = [] } = useQuery({
-    queryKey: ['tweet-sessions', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from('tweet_sessions')
-        .select('id, title, created_at, topic')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
-      return data as TweetSession[];
-    },
-    enabled: !!user
-  });
+  useEffect(() => {
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
 
-  const navigationItems = [
-    { title: "Home", url: "/", icon: Home },
-    { title: "New Session", url: "/tweet-generator", icon: Plus },
-    { title: "Dashboard", url: "/dashboard", icon: User },
-    { title: "Settings", url: "/settings", icon: Settings },
-  ];
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      // Using raw SQL to avoid type issues until database types are regenerated
+      const { data, error } = await supabase.rpc('get_user_sessions', {
+        user_uuid: user?.id
+      });
+
+      if (error) {
+        console.error('Error fetching sessions:', error);
+        return;
+      }
+
+      setSessions(data || []);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNewSession = () => {
+    navigate("/tweet-generator");
+  };
+
+  const handleSessionClick = (sessionId: string) => {
+    navigate(`/tweet-generator/${sessionId}`);
+  };
 
   return (
-    <Sidebar className={state === "collapsed" ? "w-14" : "w-64"}>
-      <SidebarTrigger className="m-2 self-end" />
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <h2 className="font-semibold text-lg">Tweet Generator</h2>
+      </SidebarHeader>
       
       <SidebarContent>
-        {/* Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive 
-                          ? "bg-muted text-primary font-medium flex items-center gap-2" 
-                          : "hover:bg-muted/50 flex items-center gap-2"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {state !== "collapsed" && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="p-4 space-y-4">
+          <Button 
+            onClick={handleNewSession} 
+            className="w-full"
+            variant="default"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Session
+          </Button>
 
-        {/* Recent Sessions */}
-        {user && sessions.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                {state !== "collapsed" && "Recent Sessions"}
-              </div>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {sessions.map((session) => (
-                  <SidebarMenuItem key={session.id}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={`/tweet-generator/${session.id}`}
-                        className="hover:bg-muted/50 flex items-center gap-2"
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Navigation</h3>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/")}>
+                  <Home className="w-4 h-4" />
+                  Home
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/dashboard")}>
+                  <Settings className="w-4 h-4" />
+                  Dashboard
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Recent Sessions</h3>
+            <ScrollArea className="h-[300px]">
+              {loading ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-10 bg-muted animate-pulse rounded" />
+                  ))}
+                </div>
+              ) : sessions.length > 0 ? (
+                <SidebarMenu>
+                  {sessions.map((session) => (
+                    <SidebarMenuItem key={session.id}>
+                      <SidebarMenuButton 
+                        onClick={() => handleSessionClick(session.id)}
+                        className="w-full justify-start"
                       >
-                        <FileText className="h-4 w-4 shrink-0" />
-                        {state !== "collapsed" && (
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {session.title}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {session.topic.slice(0, 30)}...
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(session.created_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+                        <MessageSquare className="w-4 h-4" />
+                        <span className="truncate">{session.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              ) : (
+                <p className="text-sm text-muted-foreground">No sessions yet</p>
+              )}
+            </ScrollArea>
+          </div>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
-}
+};

@@ -64,13 +64,14 @@ const AuthPage = () => {
     setLoading(true);
     
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Use the current domain without the hash for the redirect
+      const baseUrl = window.location.origin;
       
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: `${baseUrl}/auth`
         }
       });
       
@@ -102,9 +103,8 @@ const AuthPage = () => {
             title: "Account Created!", 
             description: "You can now sign in with your credentials." 
           });
+          navigate("/");
         }
-        setTab("signin");
-        reset();
       }
     } catch (error) {
       console.error("Unexpected sign up error:", error);
