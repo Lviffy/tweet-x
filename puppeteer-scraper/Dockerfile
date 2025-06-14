@@ -10,7 +10,7 @@ COPY package*.json ./
 
 # Install dependencies as root (the base image uses pptruser)
 USER root
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production && npm cache clean --force
 
 # Copy the rest of the application code
 COPY . .
