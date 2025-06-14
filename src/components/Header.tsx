@@ -26,9 +26,17 @@ const Header = () => {
     }
   };
 
-  const handleSignInClick = () => {
+  const handleSignInClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log("Sign In button clicked, navigating to /auth");
     navigate("/auth");
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate("/");
   };
 
   return (
@@ -44,7 +52,7 @@ const Header = () => {
           </nav>
 
           {/* Logo */}
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate("/")}>
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={handleLogoClick}>
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
               <span className="text-black text-base font-bold">↗</span>
             </div>
@@ -67,15 +75,16 @@ const Header = () => {
                   {user.email}
                 </span>
                 <Button 
-                  className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition"
+                  className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition cursor-pointer"
                   onClick={handleSignOut}
+                  type="button"
                 >
                   Sign Out
                 </Button>
               </div>
             ) : (
               <Button 
-                className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition"
+                className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition cursor-pointer relative z-10"
                 onClick={handleSignInClick}
                 type="button"
               >
