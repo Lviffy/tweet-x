@@ -1,19 +1,13 @@
-// Add debug log and error boundary to catch render errors
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wand2, Copy, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import TweetForm from "@/components/TweetForm";
+import TweetResults from "@/components/TweetResults";
 
-console.log("TweetGenerator page mounted"); // Debug log
+console.log("TweetGenerator page mounted");
 
 function ErrorBoundary({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
@@ -53,39 +47,6 @@ const TweetGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTweets, setGeneratedTweets] = useState<GeneratedTweet[]>([]);
   const { toast } = useToast();
-
-  const toneOptions = [
-    { value: 'build-in-public', label: 'Build-in-Public' },
-    { value: 'fundraising', label: 'Fundraising' },
-    { value: 'inspirational', label: 'Inspirational' },
-    { value: 'technical', label: 'Technical Deep-Dive' },
-    { value: 'funny', label: 'Meme/Funny' }
-  ];
-
-  const formatOptions = [
-    { value: 'single', label: 'Single Tweet' },
-    { value: 'thread-3', label: '3-Tweet Thread' },
-    { value: 'thread-5', label: '5-Tweet Thread' },
-    { value: 'thread-10', label: '10-Tweet Thread' }
-  ];
-
-  const addHandle = () => {
-    if (handles.length < 3) {
-      setHandles([...handles, '']);
-    }
-  };
-
-  const updateHandle = (index: number, value: string) => {
-    const newHandles = [...handles];
-    newHandles[index] = value;
-    setHandles(newHandles);
-  };
-
-  const removeHandle = (index: number) => {
-    if (handles.length > 1) {
-      setHandles(handles.filter((_, i) => i !== index));
-    }
-  };
 
   const generateTweets = async () => {
     if (!topic.trim() || !tone || handles.some(h => !h.trim())) {
@@ -170,194 +131,32 @@ const TweetGenerator = () => {
           </div>
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Input Form */}
-            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wand2 className="w-5 h-5" />
-                  Tweet Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Twitter Handles */}
-                <div className="space-y-2">
-                  <Label>Twitter Handles to Mimic (1-3)</Label>
-                  {handles.map((handle, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        placeholder="@naval, @levelsio, etc."
-                        value={handle}
-                        onChange={(e) => updateHandle(index, e.target.value)}
-                        className="flex-1"
-                      />
-                      {handles.length > 1 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeHandle(index)}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  {handles.length < 3 && (
-                    <Button variant="outline" size="sm" onClick={addHandle}>
-                      Add Handle
-                    </Button>
-                  )}
-                </div>
-
-                {/* Topic */}
-                <div className="space-y-2">
-                  <Label htmlFor="topic">Topic/Prompt *</Label>
-                  <Textarea
-                    id="topic"
-                    placeholder="What should the tweet be about? (e.g., 'Announcing an MVP', 'Lessons from fundraising')"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Tone */}
-                <div className="space-y-2">
-                  <Label>Tone *</Label>
-                  <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {toneOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Format */}
-                <div className="space-y-2">
-                  <Label>Format</Label>
-                  <Select value={format} onValueChange={setFormat}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formatOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Options */}
-                <div className="space-y-3">
-                  <Label>Additional Options</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="hashtags"
-                        checked={includeHashtags}
-                        onCheckedChange={(checked) => setIncludeHashtags(checked === true)}
-                      />
-                      <Label htmlFor="hashtags">Include Hashtags</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="emojis"
-                        checked={includeEmojis}
-                        onCheckedChange={(checked) => setIncludeEmojis(checked === true)}
-                      />
-                      <Label htmlFor="emojis">Include Emojis</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="cta"
-                        checked={includeCTA}
-                        onCheckedChange={(checked) => setIncludeCTA(checked === true)}
-                      />
-                      <Label htmlFor="cta">Add Call-to-Action</Label>
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={generateTweets}
-                  disabled={isGenerating}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4 mr-2" />
-                      Generate Tweets
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+            <TweetForm
+              handles={handles}
+              topic={topic}
+              tone={tone}
+              format={format}
+              includeHashtags={includeHashtags}
+              includeEmojis={includeEmojis}
+              includeCTA={includeCTA}
+              isGenerating={isGenerating}
+              onHandlesChange={setHandles}
+              onTopicChange={setTopic}
+              onToneChange={setTone}
+              onFormatChange={setFormat}
+              onIncludeHashtagsChange={setIncludeHashtags}
+              onIncludeEmojisChange={setIncludeEmojis}
+              onIncludeCTAChange={setIncludeCTA}
+              onGenerate={generateTweets}
+            />
 
             {/* Results */}
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-              {generatedTweets.length === 0 ? (
-                <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">
-                      Your generated tweets will appear here
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {generatedTweets.map((tweet, index) => (
-                    <motion.div
-                      key={tweet.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-                        <CardContent className="pt-6">
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-sm text-muted-foreground">
-                              Variation {index + 1}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(tweet.content)}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          <p className="whitespace-pre-wrap leading-relaxed">
-                            {tweet.content}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    onClick={generateTweets}
-                    disabled={isGenerating}
-                    className="w-full"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Regenerate
-                  </Button>
-                </div>
-              )}
-            </div>
+            <TweetResults
+              tweets={generatedTweets}
+              isGenerating={isGenerating}
+              onRegenerate={generateTweets}
+              onCopyToClipboard={copyToClipboard}
+            />
           </div>
         </motion.div>
       </div>
