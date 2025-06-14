@@ -65,23 +65,33 @@ export const useTweetGeneration = () => {
         throw sessionError;
       }
 
-      // Generate mock tweets for now (this will be replaced with actual AI generation later)
-      const tweetContents = [
-        `🚀 Exciting developments in ${topic}! ${includeHashtags ? '#innovation #tech' : ''} ${includeEmojis ? '💡✨' : ''} ${includeCTA ? 'What are your thoughts? Let me know below!' : ''}`,
-      ];
+      // Call the Gemini AI Edge Function
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('generate-tweets', {
+        body: {
+          handles,
+          topic,
+          tone,
+          format,
+          includeHashtags,
+          includeEmojis,
+          includeCTA
+        }
+      });
 
-      if (format === 'thread') {
-        tweetContents.push(
-          `Here's why ${topic} matters: ${includeEmojis ? '👇' : ''}`,
-          `The future of ${topic} looks bright! ${includeHashtags ? '#future #technology' : ''} ${includeCTA ? 'Follow for more insights!' : ''}`
-        );
+      if (aiError) {
+        console.error('Error calling AI function:', aiError);
+        throw new Error('Failed to generate tweets with AI');
+      }
+
+      if (!aiResponse || !aiResponse.tweets) {
+        throw new Error('Invalid response from AI service');
       }
 
       // Save generated tweets to database
-      const tweetsToInsert = tweetContents.map((content, index) => ({
+      const tweetsToInsert = aiResponse.tweets.map((tweet: GeneratedTweet, index: number) => ({
         session_id: sessionData.id,
-        content,
-        type: format as 'single' | 'thread',
+        content: tweet.content,
+        type: tweet.type,
         position: index + 1
       }));
 
@@ -95,13 +105,13 @@ export const useTweetGeneration = () => {
         throw tweetsError;
       }
 
-      const mockTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
+      const generatedTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
         id: tweet.id,
         content: tweet.content,
         type: tweet.type as 'single' | 'thread'
       }));
 
-      setGeneratedTweets(mockTweets);
+      setGeneratedTweets(generatedTweets);
       
       toast({
         title: "Tweets Generated!",

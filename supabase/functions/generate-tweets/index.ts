@@ -59,7 +59,9 @@ serve(async (req) => {
       'funny': 'Humorous and meme-like tone - entertaining, relatable, witty'
     }
 
-    const prompt = `${stylePrompt} ${formatPrompt} ${optionsPrompt}
+    const prompt = `You are an expert social media content creator specializing in Twitter/X content. Create engaging, authentic tweets that match the requested style and format.
+
+${stylePrompt} ${formatPrompt} ${optionsPrompt}
 
 Topic: ${topic}
 Tone: ${toneMap[tone] || tone}
@@ -68,36 +70,35 @@ Generate 3 different variations. For threads, separate each tweet with "---" and
 
 Return only the tweet content, no additional commentary.`
 
-    // Call OpenAI API
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Gemini API
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${Deno.env.get('GEMINI_API_KEY')}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert social media content creator specializing in Twitter/X content. Create engaging, authentic tweets that match the requested style and format.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1500,
-        temperature: 0.8,
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1500,
+        }
       }),
     })
 
-    if (!openAIResponse.ok) {
-      throw new Error('Failed to generate tweets')
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.text()
+      console.error('Gemini API error:', errorData)
+      throw new Error('Failed to generate tweets with Gemini AI')
     }
 
-    const openAIData = await openAIResponse.json()
-    const generatedContent = openAIData.choices[0].message.content
+    const geminiData = await geminiResponse.json()
+    const generatedContent = geminiData.candidates[0].content.parts[0].text
 
     // Parse the generated content into individual tweets
     const variations = generatedContent.split('\n\n').filter(v => v.trim())
