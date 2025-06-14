@@ -37,60 +37,96 @@ serve(async (req) => {
     // Build the prompt based on parameters
     let stylePrompt = ""
     if (handles && handles.length > 0) {
-      stylePrompt = `Write in the style of ${handles.join(', ')}.`
+      stylePrompt = `Analyze and mimic the writing style, tone, and engagement patterns of ${handles.join(', ')}. Study their viral content patterns.`
     }
 
     let formatPrompt = ""
     if (format === 'single') {
-      formatPrompt = "Create a single tweet (max 280 characters)."
+      formatPrompt = "Create a single tweet (max 280 characters) optimized for maximum engagement."
     } else if (format.startsWith('thread')) {
       const threadLength = format.split('-')[1]
-      formatPrompt = `Create a ${threadLength}-tweet thread. Number each tweet (1/, 2/, etc.).`
+      formatPrompt = `Create a ${threadLength}-tweet thread. Start with a compelling hook in the first tweet. Number each tweet (1/${threadLength}, 2/${threadLength}, etc.). Each tweet should build narrative tension and provide value.`
     }
 
     let optionsPrompt = ""
     const options = []
-    if (includeHashtags) options.push("include relevant hashtags")
-    if (includeEmojis) options.push("include appropriate emojis")
-    if (includeCTA) options.push("include a call-to-action")
+    if (includeHashtags) options.push("include 2-3 strategic hashtags that trend or have high engagement")
+    if (includeEmojis) options.push("include 1-2 relevant emojis that enhance readability and emotion")
+    if (includeCTA) options.push("include a compelling call-to-action that drives engagement")
     if (options.length > 0) {
       optionsPrompt = `Make sure to ${options.join(', ')}.`
     }
 
     const toneMap = {
-      'build-in-public': 'Build-in-public tone - authentic, transparent, sharing the journey',
-      'fundraising': 'Professional fundraising tone - confident, data-driven, investor-focused',
-      'inspirational': 'Inspirational and motivational tone',
-      'technical': 'Technical deep-dive tone - detailed, educational, expert-level',
-      'funny': 'Humorous and meme-like tone - entertaining, relatable, witty'
+      'build-in-public': 'Build-in-public tone - vulnerable, authentic, behind-the-scenes insights that people rarely share. Include specific numbers, failures, and lessons.',
+      'fundraising': 'Professional fundraising tone - confident but not arrogant, data-driven with compelling narrative, investor-focused with clear value proposition.',
+      'inspirational': 'Inspirational tone - motivational but not preachy, includes personal anecdotes, actionable advice, and relatable struggles.',
+      'technical': 'Technical deep-dive tone - educational but accessible, includes code snippets or technical insights, appeals to developers and tech enthusiasts.',
+      'funny': 'Humorous tone - witty observations, relatable tech humor, meme-worthy content, clever wordplay, timing-based comedy.'
     }
 
-    const prompt = `You are an expert social media content creator specializing in Twitter/X content. Create engaging, authentic tweets that match the requested style and format.
+    const viralStrategies = `
+VIRAL TWEET STRATEGIES:
+1. Hook: Start with attention-grabbing opening (controversial take, shocking stat, bold prediction)
+2. Emotion: Trigger strong emotions (surprise, anger, joy, fear, curiosity)
+3. Relatability: Address common pain points or shared experiences
+4. Storytelling: Use narrative structure with conflict and resolution
+5. Specificity: Use concrete details, numbers, and examples
+6. Controversy: Take a contrarian stance (but not offensive)
+7. Value: Provide actionable insights or useful information
+8. Urgency: Create time-sensitive or trending content
+9. Social Proof: Reference success stories or popular opinions
+10. Curiosity Gap: Tease information that makes people want to engage
+
+ENGAGEMENT TACTICS:
+- Ask thought-provoking questions
+- Use line breaks for visual appeal and readability
+- Include personal anecdotes or behind-the-scenes moments
+- Reference current events or trending topics
+- Use power words: "revealed", "secret", "mistake", "truth", "exposed"
+- Create shareable quotes or one-liners
+- Challenge conventional wisdom
+- Share counter-intuitive insights
+`
+
+    const prompt = `You are a viral content specialist and social media expert. Create highly engaging, shareable tweets that maximize reach and engagement.
 
 ${stylePrompt} ${formatPrompt} ${optionsPrompt}
 
 Topic: ${topic}
 Tone: ${toneMap[tone] || tone}
 
-Generate 3 different variations. Each variation should be a complete, standalone tweet or thread.
+${viralStrategies}
 
-IMPORTANT: 
-- Do NOT include variation labels like "Variation 1:", "Option 1:", etc.
+CONTENT REQUIREMENTS:
+- Each tweet must have viral potential with high engagement probability
+- Use psychological triggers that make people want to share
+- Include specific, concrete details rather than generic statements
+- Create content that sparks discussion and replies
+- Use formatting that enhances readability (line breaks, emphasis)
+- Ensure content is valuable, entertaining, or thought-provoking
+- Avoid generic advice - be specific and actionable
+
+Generate 3 different high-quality variations. Each should use different viral strategies and engagement tactics.
+
+CRITICAL FORMATTING RULES:
+- Do NOT include any labels like "Variation 1:", "Tweet 1:", "Option A:", etc.
 - Do NOT include explanatory text or commentary
 - Return ONLY the tweet content
-- Separate each variation with a blank line
-- For threads, separate each tweet with "---" and number them properly
+- Separate each variation with exactly one blank line
+- For threads, separate tweets with "---" on its own line
+- Make each variation distinctly different in approach and style
 
-Example format:
-This is the first tweet variation about the topic.
+Example format for single tweets:
+This is a viral tweet with strong hook and emotional trigger.
 
-This is the second tweet variation with a different approach.
+This is another viral tweet with different angle and curiosity gap.
 
-This is the third tweet variation with another angle.`
+This is a third viral tweet with contrarian take and social proof.`
 
-    console.log('Calling Gemini API with prompt:', prompt)
+    console.log('Calling Gemini API with enhanced viral prompt')
 
-    // Call Gemini API
+    // Call Gemini API with enhanced configuration
     const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
@@ -103,18 +139,29 @@ This is the third tweet variation with another angle.`
           }]
         }],
         generationConfig: {
-          temperature: 0.8,
+          temperature: 0.9, // Higher creativity for viral content
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1500,
-        }
+          maxOutputTokens: 2000, // More tokens for detailed content
+          candidateCount: 1
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       }),
     })
 
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.text()
       console.error('Gemini API error:', errorData)
-      throw new Error('Failed to generate tweets with Gemini AI')
+      throw new Error('Failed to generate viral tweets with Gemini AI')
     }
 
     const geminiData = await geminiResponse.json()
@@ -127,46 +174,71 @@ This is the third tweet variation with another angle.`
 
     const generatedContent = geminiData.candidates[0].content.parts[0].text
 
-    // Clean and parse the generated content
+    // Enhanced content cleaning and parsing
     const cleanContent = generatedContent
-      .replace(/\*\*Variation \d+:\*\*/g, '') // Remove variation labels
-      .replace(/Variation \d+:/g, '') // Remove variation labels without asterisks
-      .replace(/Option \d+:/g, '') // Remove option labels
-      .replace(/^\d+\.\s*/gm, '') // Remove numbered list formatting
-      .replace(/^-+$/gm, '') // Remove standalone dashes
+      .replace(/\*\*(Variation|Tweet|Option)\s*\d+:?\*\*/gi, '') // Remove bold variation labels
+      .replace(/(Variation|Tweet|Option)\s*\d+:?/gi, '') // Remove variation labels
+      .replace(/^\d+[\.\)]\s*/gm, '') // Remove numbered list formatting
+      .replace(/^[\-\*\+]\s*/gm, '') // Remove bullet points
+      .replace(/^-{3,}$/gm, '---') // Normalize thread separators
+      .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
       .trim()
 
-    // Split by double newlines and filter out empty or very short content
+    console.log('Cleaned content:', cleanContent)
+
+    // Split by double newlines and filter out empty or invalid content
     const variations = cleanContent
       .split(/\n\s*\n/)
       .map(v => v.trim())
-      .filter(v => v.length > 5 && !v.match(/^-+$/) && !v.toLowerCase().includes('variation'))
+      .filter(v => {
+        // Filter out short, invalid, or label-containing content
+        return v.length > 10 && 
+               !v.match(/^-+$/) && 
+               !v.toLowerCase().includes('variation') &&
+               !v.toLowerCase().includes('tweet:') &&
+               !v.toLowerCase().includes('example') &&
+               !v.toLowerCase().includes('here are') &&
+               !v.match(/^\d+[\.\)]/)
+      })
       .slice(0, 3) // Ensure we only get 3 variations
 
-    console.log('Cleaned variations:', variations)
+    console.log('Final variations:', variations)
 
-    // If we don't have enough valid variations, create fallback content
+    // Enhanced fallback content if parsing fails
     if (variations.length === 0) {
-      throw new Error('No valid tweet content generated')
+      console.error('No valid variations found, using fallback content')
+      const fallbackContent = [
+        `🚀 Just shipped a new feature that took 6 months to build.\n\nTurns out users needed something completely different.\n\nBuilding in public teaches you humility real quick.`,
+        `The biggest mistake I made as a founder:\n\nListening to everyone's advice.\n\nSometimes you need to trust your gut and ignore the noise.`,
+        `Plot twist: The feature everyone said was "too simple" is now our most used.\n\nComplexity is the enemy of adoption.\n\nKeep it simple, keep it useful.`
+      ]
+      
+      const tweets = fallbackContent.map((content, index) => ({
+        id: crypto.randomUUID(),
+        content: content,
+        type: format.startsWith('thread') ? 'thread' as const : 'single' as const
+      }))
+
+      return new Response(
+        JSON.stringify({ tweets }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
     }
 
     const tweets = variations.map((variation, index) => {
-      if (format.startsWith('thread')) {
-        return {
-          id: crypto.randomUUID(),
-          content: variation,
-          type: 'thread' as const
-        }
-      } else {
-        return {
-          id: crypto.randomUUID(),
-          content: variation,
-          type: 'single' as const
-        }
+      return {
+        id: crypto.randomUUID(),
+        content: variation,
+        type: format.startsWith('thread') ? 'thread' as const : 'single' as const
       }
     })
 
-    console.log('Generated tweets:', tweets)
+    console.log('Generated viral tweets:', tweets)
 
     return new Response(
       JSON.stringify({ tweets }),
