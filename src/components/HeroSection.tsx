@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Wand2, Download } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -17,9 +18,6 @@ const HeroSection = () => {
             ease: "easeIn"
           }}
         >
-          {/* Brand name */}
-      
-
           {/* Main heading */}
           <h1 className="text-5xl md:text-6xl font-semibold leading-tight font-weight-600">
             Find Inspiration.
@@ -36,20 +34,20 @@ const HeroSection = () => {
           {/* Description */}
           <p className="text-md text-muted-foreground max-w-3xl mx-auto font-normal">
             Welcome to PromptVerse. Effortlessly create content, explore endless prompts, and stay ahead with 
-            real-time trends. Automate emails, social media, and more while our AI extracts knowledge from any 
-            document or URL. Experience a stunning, futuristic design that boosts productivity.
+            real-time trends. Generate founder-style tweets with AI, automate social media, and boost productivity 
+            with our stunning, futuristic design.
           </p>
 
           {/* Call to action buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
-           
-
-            <Button className=" flex items-center gap-2 rounded-full bg-transparent text-white font-medium px-6 py-2 hover:bg-gray-100 transition border border-white ">
-                 <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform text-white" />
-              Start Generating
-            </Button>
+            <Link to="/tweet-generator">
+              <Button className="flex items-center gap-2 rounded-full bg-transparent text-white font-medium px-6 py-2 hover:bg-gray-100 hover:text-black transition border border-white">
+                <Wand2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+                Start Generating
+              </Button>
+            </Link>
             
-          <Button className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition">
+            <Button className="rounded-full bg-white text-black font-medium px-6 py-2 hover:bg-gray-100 transition">
               Download
             </Button>
           </div>
