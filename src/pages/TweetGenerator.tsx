@@ -1,6 +1,6 @@
 // Add debug log and error boundary to catch render errors
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,16 +26,12 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return (
-    <React.ErrorBoundary
-      fallbackRender={({ error }) => {
-        setError(error);
-        return null;
-      }}
-    >
-      {children}
-    </React.ErrorBoundary>
-  );
+  try {
+    return <>{children}</>;
+  } catch (err) {
+    setError(err as Error);
+    return null;
+  }
 }
 
 interface GeneratedTweet {
