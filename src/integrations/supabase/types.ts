@@ -47,22 +47,46 @@ export type Database = {
       tweet_sessions: {
         Row: {
           created_at: string
+          format: string | null
+          handles: string[] | null
           id: string
+          include_cta: boolean | null
+          include_emojis: boolean | null
+          include_hashtags: boolean | null
           title: string
+          tone: string | null
+          topic: string | null
+          tweet_count: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          format?: string | null
+          handles?: string[] | null
           id?: string
+          include_cta?: boolean | null
+          include_emojis?: boolean | null
+          include_hashtags?: boolean | null
           title: string
+          tone?: string | null
+          topic?: string | null
+          tweet_count?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          format?: string | null
+          handles?: string[] | null
           id?: string
+          include_cta?: boolean | null
+          include_emojis?: boolean | null
+          include_hashtags?: boolean | null
           title?: string
+          tone?: string | null
+          topic?: string | null
+          tweet_count?: number | null
           updated_at?: string
           user_id?: string
         }

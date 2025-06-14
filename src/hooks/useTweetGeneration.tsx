@@ -176,16 +176,17 @@ export const useTweetGeneration = () => {
         type: tweet.type as 'single' | 'thread'
       })) || [];
 
-      // Extract session parameters
+      // Extract session parameters - use explicit type casting to access the new columns
+      const sessionRecord = sessionData as any;
       const params: TweetGenerationParams = {
-        handles: sessionData.handles || [''],
-        topic: sessionData.topic || '',
-        tone: sessionData.tone || '',
-        format: sessionData.format || 'single',
-        tweetCount: sessionData.tweet_count || 3,
-        includeHashtags: sessionData.include_hashtags || false,
-        includeEmojis: sessionData.include_emojis || false,
-        includeCTA: sessionData.include_cta || false
+        handles: sessionRecord.handles || [''],
+        topic: sessionRecord.topic || '',
+        tone: sessionRecord.tone || '',
+        format: sessionRecord.format || 'single',
+        tweetCount: sessionRecord.tweet_count || 3,
+        includeHashtags: sessionRecord.include_hashtags || false,
+        includeEmojis: sessionRecord.include_emojis || false,
+        includeCTA: sessionRecord.include_cta || false
       };
 
       setGeneratedTweets(tweets);
