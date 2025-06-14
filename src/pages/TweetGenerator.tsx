@@ -148,28 +148,26 @@ const TweetGenerator = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-gray-900/20 relative overflow-hidden">
       <div className="container mx-auto px-6 py-12">
-        {/* Go Home Button */}
-        <div className="mb-6">
-          <Button variant="outline" onClick={() => navigate("/")}>
-            Go Home
-          </Button>
-        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="max-w-6xl mx-auto"
         >
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Founder-Style <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Tweet Generator</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Generate authentic tweets in the style of successful founders using AI. Build your voice, grow your audience.
-            </p>
+          {/* Header with Go Home button and Heading */}
+          <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
+            <Button variant="outline" onClick={() => navigate("/")}>
+              Go Home
+            </Button>
+            <div className="flex-1 flex justify-center">
+              <h1 className="text-4xl md:text-5xl font-bold mb-0 text-center w-full">
+                Founder-Style{" "}
+                <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Tweet Generator
+                </span>
+              </h1>
+            </div>
           </div>
-
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Input Form */}
             <Card className="bg-background/80 backdrop-blur-sm border-white/10">
