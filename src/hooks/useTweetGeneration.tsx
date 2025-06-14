@@ -15,6 +15,7 @@ interface TweetGenerationParams {
   topic: string;
   tone: string;
   format: string;
+  tweetCount: number;
   includeHashtags: boolean;
   includeEmojis: boolean;
   includeCTA: boolean;
@@ -36,7 +37,7 @@ export const useTweetGeneration = () => {
       return null;
     }
 
-    const { handles, topic, tone, format, includeHashtags, includeEmojis, includeCTA } = params;
+    const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = params;
 
     if (!topic.trim() || !tone || handles.some(h => !h.trim())) {
       toast({
@@ -72,6 +73,7 @@ export const useTweetGeneration = () => {
           topic,
           tone,
           format,
+          tweetCount,
           includeHashtags,
           includeEmojis,
           includeCTA
@@ -115,7 +117,7 @@ export const useTweetGeneration = () => {
       
       toast({
         title: "Tweets Generated!",
-        description: "Your AI-generated tweets are ready."
+        description: `${generatedTweets.length} AI-generated tweets are ready.`
       });
 
       return sessionData.id;

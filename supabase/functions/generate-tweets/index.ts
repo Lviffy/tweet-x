@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { handles, topic, tone, format, includeHashtags, includeEmojis, includeCTA } = await req.json()
+    const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = await req.json()
     
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
@@ -107,7 +107,7 @@ CONTENT REQUIREMENTS:
 - Ensure content is valuable, entertaining, or thought-provoking
 - Avoid generic advice - be specific and actionable
 
-Generate 3 different high-quality variations. Each should use different viral strategies and engagement tactics.
+Generate ${tweetCount} different high-quality variations. Each should use different viral strategies and engagement tactics.
 
 CRITICAL FORMATTING RULES:
 - Do NOT include any labels like "Variation 1:", "Tweet 1:", "Option A:", etc.
@@ -124,7 +124,7 @@ This is another viral tweet with different angle and curiosity gap.
 
 This is a third viral tweet with contrarian take and social proof.`
 
-    console.log('Calling Gemini API with enhanced viral prompt')
+    console.log(`Calling Gemini API to generate ${tweetCount} viral tweets`)
 
     // Call Gemini API with enhanced configuration
     const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
@@ -142,7 +142,7 @@ This is a third viral tweet with contrarian take and social proof.`
           temperature: 0.9, // Higher creativity for viral content
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2000, // More tokens for detailed content
+          maxOutputTokens: 3000, // More tokens for multiple variations
           candidateCount: 1
         },
         safetySettings: [
@@ -200,20 +200,25 @@ This is a third viral tweet with contrarian take and social proof.`
                !v.toLowerCase().includes('here are') &&
                !v.match(/^\d+[\.\)]/)
       })
-      .slice(0, 3) // Ensure we only get 3 variations
+      .slice(0, tweetCount) // Ensure we only get the requested number
 
-    console.log('Final variations:', variations)
+    console.log(`Final variations (${variations.length}):`, variations)
 
     // Enhanced fallback content if parsing fails
     if (variations.length === 0) {
       console.error('No valid variations found, using fallback content')
-      const fallbackContent = [
+      const fallbackTemplates = [
         `🚀 Just shipped a new feature that took 6 months to build.\n\nTurns out users needed something completely different.\n\nBuilding in public teaches you humility real quick.`,
         `The biggest mistake I made as a founder:\n\nListening to everyone's advice.\n\nSometimes you need to trust your gut and ignore the noise.`,
-        `Plot twist: The feature everyone said was "too simple" is now our most used.\n\nComplexity is the enemy of adoption.\n\nKeep it simple, keep it useful.`
-      ]
+        `Plot twist: The feature everyone said was "too simple" is now our most used.\n\nComplexity is the enemy of adoption.\n\nKeep it simple, keep it useful.`,
+        `Harsh truth: Your product isn't failing because of features.\n\nIt's failing because you haven't found product-market fit.\n\nStop building, start listening.`,
+        `Raised $1M, burned it in 8 months.\n\nLesson learned: Revenue > Funding.\n\nBootstrap mindset even when you have money.`,
+        `3 years of "overnight success":\n\n• 47 failed prototypes\n• 12 pivots\n• 1 breakthrough\n\nSuccess is just failure with persistence.`,
+        `Your competition isn't other startups.\n\nIt's the status quo.\n\nMost people prefer broken familiar over perfect unknown.`,
+        `Technical debt is like credit card debt.\n\nFeels great at first.\n\nThen it compounds and kills you.`
+      ];
       
-      const tweets = fallbackContent.map((content, index) => ({
+      const tweets = fallbackTemplates.slice(0, tweetCount).map((content, index) => ({
         id: crypto.randomUUID(),
         content: content,
         type: format.startsWith('thread') ? 'thread' as const : 'single' as const
@@ -238,7 +243,7 @@ This is a third viral tweet with contrarian take and social proof.`
       }
     })
 
-    console.log('Generated viral tweets:', tweets)
+    console.log(`Generated ${tweets.length} viral tweets:`, tweets)
 
     return new Response(
       JSON.stringify({ tweets }),

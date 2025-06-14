@@ -41,6 +41,7 @@ const TweetGenerator = () => {
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
   const [format, setFormat] = useState('single');
+  const [tweetCount, setTweetCount] = useState(3);
   const [includeHashtags, setIncludeHashtags] = useState(false);
   const [includeEmojis, setIncludeEmojis] = useState(false);
   const [includeCTA, setIncludeCTA] = useState(false);
@@ -73,6 +74,7 @@ const TweetGenerator = () => {
       topic,
       tone,
       format,
+      tweetCount,
       includeHashtags,
       includeEmojis,
       includeCTA
@@ -143,6 +145,7 @@ const TweetGenerator = () => {
                   topic={topic}
                   tone={tone}
                   format={format}
+                  tweetCount={tweetCount}
                   includeHashtags={includeHashtags}
                   includeEmojis={includeEmojis}
                   includeCTA={includeCTA}
@@ -151,6 +154,7 @@ const TweetGenerator = () => {
                   onTopicChange={setTopic}
                   onToneChange={setTone}
                   onFormatChange={setFormat}
+                  onTweetCountChange={setTweetCount}
                   onIncludeHashtagsChange={setIncludeHashtags}
                   onIncludeEmojisChange={setIncludeEmojis}
                   onIncludeCTAChange={setIncludeCTA}
