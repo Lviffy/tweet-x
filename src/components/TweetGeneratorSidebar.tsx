@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { MessageSquare, Plus, Home, Settings, LogOut } from "lucide-react";
+import { MessageSquare, Plus, Home, Settings, LogOut, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Session {
@@ -49,6 +49,42 @@ export const TweetGeneratorSidebar = () => {
       console.error('Error fetching sessions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('tweet_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error deleting session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete session. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove the session from local state
+      setSessions(sessions.filter(session => session.id !== sessionId));
+      
+      toast({
+        title: "Session deleted",
+        description: "The session has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete session. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -131,13 +167,23 @@ export const TweetGeneratorSidebar = () => {
                 <SidebarMenu>
                   {sessions.map((session) => (
                     <SidebarMenuItem key={session.id}>
-                      <SidebarMenuButton 
-                        onClick={() => handleSessionClick(session.id)}
-                        className="w-full justify-start"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="truncate">{session.title}</span>
-                      </SidebarMenuButton>
+                      <div className="flex items-center w-full">
+                        <SidebarMenuButton 
+                          onClick={() => handleSessionClick(session.id)}
+                          className="flex-1 justify-start"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span className="truncate">{session.title}</span>
+                        </SidebarMenuButton>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="ml-1 h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>

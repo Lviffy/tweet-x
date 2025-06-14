@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
-import { MessageSquare, Plus, TrendingUp } from "lucide-react";
+import { MessageSquare, Plus, TrendingUp, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Session {
@@ -80,6 +80,42 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('tweet_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error deleting session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete session. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove the session from local state
+      setSessions(sessions.filter(session => session.id !== sessionId));
+      
+      toast({
+        title: "Session deleted",
+        description: "The session has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete session. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -200,8 +236,18 @@ const Dashboard = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {session.tweet_count || 0} tweets
+                      <div className="flex items-center space-x-2">
+                        <div className="text-sm text-muted-foreground">
+                          {session.tweet_count || 0} tweets
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="text-muted-foreground hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
