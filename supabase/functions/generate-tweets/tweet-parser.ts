@@ -5,20 +5,26 @@ export function parseTweets(generatedText: string, format: string, requestedCoun
   const tweets: GeneratedTweet[] = [];
   const lines = generatedText.split('\n').filter(line => line.trim());
   
+  console.log(`Parsing tweets - Format: ${format}, Requested count: ${requestedCount}`);
+  console.log(`Generated text lines: ${lines.length}`);
+  
   let tweetId = 1;
   
   if (format.includes('thread')) {
-    // For threads, each thread counts as one "tweet" but contains multiple parts
-    const threadLength = parseInt(format.split('-')[1]) || 3;
+    // For threads, parse each complete thread as one unit
     let currentThread: string[] = [];
     let threadCount = 0;
     
     for (const line of lines) {
-      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      const cleanLine = line.replace(/^\d+\.\s*/, '').replace(/^(Thread \d+:?\s*|Tweet \d+:?\s*)/i, '').trim();
       
-      // Check if this is a thread indicator (1/3, 2/3, etc.) or thread start
-      if (cleanLine.match(/^1\/\d+/) || cleanLine.includes('🧵') || cleanLine.toLowerCase().includes('thread')) {
-        // Start of new thread
+      // Skip empty lines or very short content
+      if (cleanLine.length < 10) continue;
+      
+      // Check if this starts a new thread
+      if (cleanLine.match(/^1\/\d+/) || cleanLine.toLowerCase().includes('thread') || 
+          cleanLine.includes('🧵') || cleanLine.match(/^Thread \d+/i)) {
+        // Save previous thread if it exists
         if (currentThread.length > 0 && threadCount < requestedCount) {
           tweets.push({
             id: `thread-${tweetId++}`,
@@ -28,81 +34,84 @@ export function parseTweets(generatedText: string, format: string, requestedCoun
           threadCount++;
         }
         currentThread = [cleanLine];
-      } else if (cleanLine.match(/^\d+\/\d+/)) {
-        // Continuation of thread (2/3, 3/3, etc.)
-        if (currentThread.length > 0) {
-          currentThread.push(cleanLine);
-        }
-      } else if (cleanLine.length > 10 && !cleanLine.match(/^(tweet|variation|\d+\.)/i)) {
-        // Regular content line
-        if (currentThread.length > 0) {
-          currentThread.push(cleanLine);
-        } else if (threadCount < requestedCount) {
-          // Start a new thread if we haven't reached the limit
-          currentThread = [cleanLine];
-        }
+      } else if (cleanLine.match(/^\d+\/\d+/) || currentThread.length > 0) {
+        // Continue current thread
+        currentThread.push(cleanLine);
+      } else if (threadCount < requestedCount) {
+        // Start new thread with this line
+        currentThread = [cleanLine];
       }
     }
     
-    // Add the last thread if exists and we haven't reached the limit
+    // Add the last thread
     if (currentThread.length > 0 && threadCount < requestedCount) {
       tweets.push({
         id: `thread-${tweetId++}`,
         content: currentThread.join('\n\n'),
         type: 'thread' as const
       });
+      threadCount++;
     }
     
-    // If we don't have enough threads, split the content differently
-    if (tweets.length < requestedCount && lines.length > 0) {
-      const remainingLines = lines.filter(line => {
-        const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
-        return cleanLine.length > 10;
+    // If we still don't have enough threads, create them from remaining content
+    while (tweets.length < requestedCount && lines.length > 0) {
+      const startIdx = tweets.length * 3; // Assume 3 tweets per thread
+      const endIdx = startIdx + 3;
+      const threadLines = lines.slice(startIdx, endIdx).filter(line => {
+        const clean = line.replace(/^\d+\.\s*/, '').trim();
+        return clean.length > 10;
       });
       
-      // Group remaining lines into threads
-      const linesPerThread = Math.ceil(remainingLines.length / (requestedCount - tweets.length));
-      for (let i = tweets.length; i < requestedCount && i * linesPerThread < remainingLines.length; i++) {
-        const threadLines = remainingLines.slice(i * linesPerThread, (i + 1) * linesPerThread);
-        if (threadLines.length > 0) {
+      if (threadLines.length > 0) {
+        tweets.push({
+          id: `thread-${tweetId++}`,
+          content: threadLines.join('\n\n'),
+          type: 'thread' as const
+        });
+      } else {
+        break;
+      }
+    }
+  } else {
+    // For single tweets
+    let processedCount = 0;
+    
+    for (const line of lines) {
+      if (processedCount >= requestedCount) break;
+      
+      const cleanLine = line.replace(/^\d+\.\s*/, '')
+                           .replace(/^(Tweet \d+:?\s*|Variation \d+:?\s*)/i, '')
+                           .trim();
+      
+      // Skip empty or too short lines
+      if (cleanLine.length < 20) continue;
+      
+      tweets.push({
+        id: `tweet-${tweetId++}`,
+        content: cleanLine,
+        type: 'single' as const
+      });
+      processedCount++;
+    }
+    
+    // If we don't have enough tweets, try to extract more from the content
+    if (tweets.length < requestedCount) {
+      const allText = generatedText.replace(/^\d+\.\s*/gm, '').trim();
+      const sentences = allText.split(/[.!?]+/).filter(s => s.trim().length > 30);
+      
+      for (let i = tweets.length; i < requestedCount && i < sentences.length; i++) {
+        const sentence = sentences[i].trim();
+        if (sentence.length > 20) {
           tweets.push({
-            id: `thread-${tweetId++}`,
-            content: threadLines.join('\n\n'),
-            type: 'thread' as const
+            id: `tweet-${tweetId++}`,
+            content: sentence + (sentence.endsWith('.') ? '' : '.'),
+            type: 'single' as const
           });
         }
       }
     }
-  } else {
-    // For single tweets, each line/paragraph should be a separate tweet
-    let processedCount = 0;
-    
-    for (const line of lines) {
-      const cleanLine = line.replace(/^\d+\.\s*/, '').replace(/^tweet\s*\d*:?\s*/i, '').trim();
-      
-      if (cleanLine.length > 10 && processedCount < requestedCount) {
-        tweets.push({
-          id: `tweet-${tweetId++}`,
-          content: cleanLine,
-          type: 'single' as const
-        });
-        processedCount++;
-      }
-    }
-    
-    // If we still don't have enough tweets, split longer content
-    if (tweets.length < requestedCount && generatedText.trim()) {
-      const sentences = generatedText.split(/[.!?]+/).filter(s => s.trim().length > 20);
-      
-      for (let i = tweets.length; i < requestedCount && i < sentences.length; i++) {
-        tweets.push({
-          id: `tweet-${tweetId++}`,
-          content: sentences[i].trim() + (sentences[i].includes('.') ? '' : '.'),
-          type: 'single' as const
-        });
-      }
-    }
   }
   
-  return tweets;
+  console.log(`Parsed ${tweets.length} tweets of type ${format}`);
+  return tweets.slice(0, requestedCount); // Ensure we don't exceed requested count
 }

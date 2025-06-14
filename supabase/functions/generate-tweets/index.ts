@@ -31,37 +31,63 @@ serve(async (req) => {
       includeCTA 
     } = requestData;
 
-    console.log('Generate tweets request:', { handles, topic, tone, format, tweetCount });
+    console.log('Generate tweets request:', { 
+      handles: handles?.length || 0, 
+      topic: topic?.substring(0, 50) + '...', 
+      tone, 
+      format, 
+      tweetCount 
+    });
+
+    // Validate required fields
+    if (!topic?.trim()) {
+      throw new Error('Topic is required');
+    }
+    if (!tone?.trim()) {
+      throw new Error('Tone is required');
+    }
+    if (!tweetCount || tweetCount < 1 || tweetCount > 10) {
+      throw new Error('Tweet count must be between 1 and 10');
+    }
 
     // Authenticate user
     const authHeader = req.headers.get('authorization');
     const { user, supabase } = await authenticateUser(authHeader);
 
-    // Fetch detailed profile analysis for the selected handles
-    const profileData = await getDetailedProfileAnalysis(supabase, user.id, handles);
+    // Fetch profile analysis (handles can be empty array)
+    const profileData = await getDetailedProfileAnalysis(supabase, user.id, handles || []);
     
-    // Generate enhanced AI prompt with detailed context
+    // Generate AI prompt
     const prompt = createDetailedPrompt({
-      handles,
+      handles: handles || [],
       topic,
       tone,
-      format,
+      format: format || 'single',
       tweetCount,
-      includeHashtags,
-      includeEmojis,
-      includeCTA,
+      includeHashtags: includeHashtags || false,
+      includeEmojis: includeEmojis || false,
+      includeCTA: includeCTA || false,
       profileData
     });
 
-    console.log('Enhanced AI prompt created with detailed profile analysis');
+    console.log('AI prompt created, calling Gemini...');
 
     // Call Gemini AI
     const generatedText = await callGeminiAI(prompt);
     
-    // Parse tweets with the requested count
-    const tweets = parseTweets(generatedText, format, tweetCount);
+    if (!generatedText?.trim()) {
+      throw new Error('AI generated empty response');
+    }
+    
+    // Parse tweets with proper format and count handling
+    const tweets = parseTweets(generatedText, format || 'single', tweetCount);
 
-    console.log(`Generated ${tweets.length} tweets (requested: ${tweetCount})`);
+    console.log(`Successfully generated ${tweets.length} tweets (requested: ${tweetCount})`);
+
+    // Ensure we have the requested number of tweets
+    if (tweets.length === 0) {
+      throw new Error('Failed to parse any tweets from AI response');
+    }
 
     return new Response(JSON.stringify({ tweets }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -69,7 +95,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-tweets function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Internal server error',
+      details: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

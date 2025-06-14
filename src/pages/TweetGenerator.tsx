@@ -37,7 +37,7 @@ const TweetGenerator = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { user, loading } = useAuth();
-  const [handles, setHandles] = useState<string[]>([]);  // Changed from [''] to []
+  const [handles, setHandles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
   const [format, setFormat] = useState('single');
@@ -52,8 +52,7 @@ const TweetGenerator = () => {
   // Reset form when sessionId changes or is removed
   useEffect(() => {
     if (!sessionId) {
-      // Reset all form fields for new session
-      setHandles([]);  // Changed from [''] to []
+      setHandles([]);
       setTopic('');
       setTone('');
       setFormat('single');
@@ -75,18 +74,18 @@ const TweetGenerator = () => {
   // Update form fields when session parameters are loaded
   useEffect(() => {
     if (sessionParams) {
-      setHandles(sessionParams.handles || []);  // Handle empty arrays properly
-      setTopic(sessionParams.topic);
-      setTone(sessionParams.tone);
-      setFormat(sessionParams.format);
-      setTweetCount(sessionParams.tweetCount);
-      setIncludeHashtags(sessionParams.includeHashtags);
-      setIncludeEmojis(sessionParams.includeEmojis);
-      setIncludeCTA(sessionParams.includeCTA);
+      setHandles(sessionParams.handles || []);
+      setTopic(sessionParams.topic || '');
+      setTone(sessionParams.tone || '');
+      setFormat(sessionParams.format || 'single');
+      setTweetCount(sessionParams.tweetCount || 3);
+      setIncludeHashtags(sessionParams.includeHashtags || false);
+      setIncludeEmojis(sessionParams.includeEmojis || false);
+      setIncludeCTA(sessionParams.includeCTA || false);
     }
   }, [sessionParams]);
 
-  // Redirect to auth if not authenticated - but only after loading is complete
+  // Redirect to auth if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       toast({
@@ -99,9 +98,28 @@ const TweetGenerator = () => {
   }, [user, loading, navigate, toast]);
 
   const handleGenerate = async () => {
+    // Validate required fields
+    if (!topic.trim()) {
+      toast({
+        title: "Missing Topic",
+        description: "Please enter a topic for your tweets.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!tone) {
+      toast({
+        title: "Missing Tone",
+        description: "Please select a tone for your tweets.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newSessionId = await generateTweets({
-      handles,
-      topic,
+      handles: handles.length > 0 ? handles : [], // Ensure empty array instead of undefined
+      topic: topic.trim(),
       tone,
       format,
       tweetCount,
@@ -132,7 +150,7 @@ const TweetGenerator = () => {
     );
   }
 
-  // Don't render anything if user is not authenticated (will redirect)
+  // Don't render anything if user is not authenticated
   if (!user) {
     return null;
   }
