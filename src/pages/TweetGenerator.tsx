@@ -45,6 +45,7 @@ const TweetGenerator = () => {
   const [includeHashtags, setIncludeHashtags] = useState(false);
   const [includeEmojis, setIncludeEmojis] = useState(false);
   const [includeCTA, setIncludeCTA] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const { toast } = useToast();
 
   const { 
@@ -58,10 +59,10 @@ const TweetGenerator = () => {
     setGeneratedTweets 
   } = useTweetGeneration();
 
-  // Reset form when sessionId changes or is removed
+  // Initialize form only once when component mounts
   useEffect(() => {
-    if (!sessionId) {
-      console.log('No sessionId, clearing form');
+    if (!hasInitialized && !sessionId) {
+      console.log('Initializing form for new session');
       setHandles([]);
       setTopic('');
       setTone('');
@@ -71,20 +72,21 @@ const TweetGenerator = () => {
       setIncludeEmojis(false);
       setIncludeCTA(false);
       clearSession();
+      setHasInitialized(true);
     }
-  }, [sessionId, clearSession]);
+  }, [sessionId, hasInitialized, clearSession]);
 
   // Load session if sessionId is provided
   useEffect(() => {
-    if (sessionId && !isLoadingSession) {
+    if (sessionId && !isLoadingSession && hasInitialized) {
       console.log('Loading session:', sessionId);
       loadSession(sessionId);
     }
-  }, [sessionId, loadSession, isLoadingSession]);
+  }, [sessionId, loadSession, isLoadingSession, hasInitialized]);
 
   // Update form fields when session parameters are loaded
   useEffect(() => {
-    if (sessionParams) {
+    if (sessionParams && hasInitialized) {
       console.log('Updating form with session params:', sessionParams);
       setHandles(sessionParams.handles || []);
       setTopic(sessionParams.topic || '');
@@ -95,7 +97,7 @@ const TweetGenerator = () => {
       setIncludeEmojis(sessionParams.includeEmojis || false);
       setIncludeCTA(sessionParams.includeCTA || false);
     }
-  }, [sessionParams]);
+  }, [sessionParams, hasInitialized]);
 
   // Redirect to auth if not authenticated
   useEffect(() => {
