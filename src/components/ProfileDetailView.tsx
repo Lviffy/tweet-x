@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Calendar } from "lucide-react";
 import { useScrapedTweets } from "@/hooks/useScrapedTweets";
 import ProfileHeader from "./ProfileHeader";
