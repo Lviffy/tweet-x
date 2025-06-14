@@ -19,31 +19,43 @@ interface Session {
 const Dashboard = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  console.log("Dashboard: user =", user?.email, "authLoading =", authLoading);
+
   useEffect(() => {
+    console.log("Dashboard useEffect: user changed", user?.email);
+    
+    if (authLoading) {
+      console.log("Auth still loading, waiting...");
+      return;
+    }
+    
     if (!user) {
+      console.log("No user found, redirecting to auth");
       navigate("/auth");
       return;
     }
     
+    console.log("User found, fetching sessions");
     fetchSessions();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchSessions = async () => {
+    if (!user) {
+      console.log("No user in fetchSessions");
+      return;
+    }
+
     try {
+      console.log("Fetching sessions for user:", user.id);
       setLoading(true);
       
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('tweet_sessions')
-        .select(`
-          id,
-          title,
-          created_at,
-          generated_tweets(count)
-        `)
-        .eq('user_id', user?.id)
+        .select('id, title, created_at')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -57,13 +69,8 @@ const Dashboard = () => {
         return;
       }
 
-      // Transform the data to include tweet counts
-      const transformedSessions = sessionsData?.map(session => ({
-        ...session,
-        tweet_count: session.generated_tweets?.[0]?.count || 0
-      })) || [];
-
-      setSessions(transformedSessions);
+      console.log("Sessions fetched:", sessionsData);
+      setSessions(sessionsData || []);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({
@@ -77,12 +84,24 @@ const Dashboard = () => {
   };
 
   const handleSessionClick = (sessionId: string) => {
+    console.log("Navigating to session:", sessionId);
     navigate(`/tweet-generator/${sessionId}`);
   };
 
   const handleNewSession = () => {
+    console.log("Creating new session");
     navigate("/tweet-generator");
   };
+
+  console.log("Dashboard render: authLoading =", authLoading, "user =", !!user);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
