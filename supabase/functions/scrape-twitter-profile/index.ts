@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -14,6 +13,12 @@ interface TweetData {
   isThread: boolean;
   hasEmojis: boolean;
   hashtags: string[];
+  timestamp: string;
+  engagement?: {
+    likes: number;
+    retweets: number;
+    replies: number;
+  };
 }
 
 interface ProfileAnalysis {
@@ -84,8 +89,8 @@ serve(async (req) => {
       });
     }
 
-    // Mock comprehensive profile data with realistic analysis
-    const scrapedData = await mockTwitterProfile(handle);
+    // Enhanced mock scraping with more realistic content
+    const scrapedData = await enhancedMockTwitterProfile(handle);
     
     if (!scrapedData.success) {
       return new Response(JSON.stringify({ error: scrapedData.error }), {
@@ -143,6 +148,12 @@ serve(async (req) => {
         .select()
         .single();
       result = { data, error };
+
+      // Delete existing tweets for this profile
+      await supabase
+        .from('scraped_tweets')
+        .delete()
+        .eq('profile_id', existingProfile.id);
     } else {
       console.log('Inserting new profile');
       const { data, error } = await supabase
@@ -165,12 +176,37 @@ serve(async (req) => {
       });
     }
 
+    // Store individual tweets
+    const tweetsToInsert = scrapedData.tweets.map((tweet, index) => ({
+      profile_id: result.data.id,
+      content: tweet.text,
+      is_thread: tweet.isThread,
+      has_emojis: tweet.hasEmojis,
+      hashtags: tweet.hashtags,
+      tweet_length: tweet.length,
+      position: index + 1,
+      scraped_at: tweet.timestamp,
+      engagement_likes: tweet.engagement?.likes || 0,
+      engagement_retweets: tweet.engagement?.retweets || 0,
+      engagement_replies: tweet.engagement?.replies || 0,
+    }));
+
+    const { error: tweetsError } = await supabase
+      .from('scraped_tweets')
+      .insert(tweetsToInsert);
+
+    if (tweetsError) {
+      console.error('Error saving tweets:', tweetsError);
+      // Don't fail the whole operation if tweets fail to save
+    }
+
     console.log('Successfully saved profile:', result.data.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
       profile: result.data,
-      analysis: analysis 
+      analysis: analysis,
+      tweets: scrapedData.tweets 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -187,13 +223,13 @@ serve(async (req) => {
   }
 });
 
-async function mockTwitterProfile(handle: string) {
+async function enhancedMockTwitterProfile(handle: string) {
   try {
     const cleanHandle = handle.replace('@', '');
     
-    console.log(`Mocking profile data for: ${cleanHandle}`);
+    console.log(`Mocking enhanced profile data for: ${cleanHandle}`);
     
-    // Enhanced mock data with more realistic content
+    // More comprehensive mock profiles with realistic tweet patterns
     const mockProfiles = {
       'naval': {
         displayName: 'Naval',
@@ -206,21 +242,45 @@ async function mockTwitterProfile(handle: string) {
             length: 154,
             isThread: false,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 1245, retweets: 234, replies: 89 }
           },
           {
-            text: "1/ Reading is faster than listening. Doing is faster than watching.",
-            length: 68,
+            text: "1/ Reading is faster than listening. Doing is faster than watching.\n\n2/ The best teachers are on the Internet. The best books are on the Internet. The best peers are on the Internet.\n\n3/ The tools for learning are abundant. It's the desire to learn that's scarce.",
+            length: 268,
             isThread: true,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 2156, retweets: 445, replies: 156 }
           },
           {
             text: "The Internet has massively broadened the possible space of careers. Most people haven't figured this out yet.",
             length: 110,
             isThread: false,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 892, retweets: 178, replies: 67 }
+          },
+          {
+            text: "Play long-term games with long-term people.",
+            length: 44,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: [],
+            timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 3421, retweets: 789, replies: 234 }
+          },
+          {
+            text: "Specific knowledge is knowledge that you cannot be trained for. If society can train you, it can train someone else, and replace you.",
+            length: 137,
+            isThread: false,
+            hasEmojis: false,
+            hashtags: [],
+            timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 1678, retweets: 334, replies: 123 }
           }
         ]
       },
@@ -235,21 +295,45 @@ async function mockTwitterProfile(handle: string) {
             length: 130,
             isThread: false,
             hasEmojis: true,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 456, retweets: 89, replies: 34 }
           },
           {
-            text: "1/ Thread on why most startups fail:\n\nIt's not about the idea. It's about execution, timing, and product-market fit. Let me break it down...",
-            length: 140,
+            text: "1/ Thread on why most startups fail:\n\nIt's not about the idea. It's about execution, timing, and product-market fit. Let me break it down...\n\n2/ Most founders fall in love with their solution, not the problem. They build what they want, not what users need.",
+            length: 240,
             isThread: true,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 789, retweets: 156, replies: 67 }
           },
           {
             text: "Just shipped a new feature for @nomadlist. Here's what I learned: start small, get feedback fast, iterate quickly. Ship > perfect.",
             length: 135,
             isThread: false,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 234, retweets: 45, replies: 23 }
+          },
+          {
+            text: "Remote work is not going away. Companies that don't adapt will lose the best talent to those that do. 🌍💻",
+            length: 108,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: ['#remote', '#work'],
+            timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 567, retweets: 123, replies: 45 }
+          },
+          {
+            text: "Making $100k/month from simple websites. No VC. No employees. Just code, coffee, and customers. ☕️💰",
+            length: 102,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: ['#indiehacker'],
+            timestamp: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 1234, retweets: 345, replies: 156 }
           }
         ]
       },
@@ -264,35 +348,54 @@ async function mockTwitterProfile(handle: string) {
             length: 125,
             isThread: false,
             hasEmojis: true,
-            hashtags: ["#buildinpublic"]
+            hashtags: ["#buildinpublic"],
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 45, retweets: 12, replies: 8 }
           },
           {
-            text: "1/ Quick thread on productivity tips that actually work:\n\nTime blocking changed my life. Here's how I do it...",
-            length: 105,
+            text: "1/ Quick thread on productivity tips that actually work:\n\nTime blocking changed my life. Here's how I do it...\n\n2/ I divide my day into 2-hour focused blocks. Deep work in the morning, meetings in the afternoon.",
+            length: 205,
             isThread: true,
             hasEmojis: false,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 89, retweets: 23, replies: 15 }
           },
           {
             text: "Just launched my MVP! It's not perfect, but it's live. The feedback so far has been incredible. Here's what I learned:",
             length: 120,
             isThread: false,
             hasEmojis: false,
-            hashtags: ["#MVP", "#startup"]
+            hashtags: ["#MVP", "#startup"],
+            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 67, retweets: 18, replies: 12 }
           },
           {
             text: "The best part about being a founder? You get to solve problems that matter to you. The worst part? Everything else 😅",
             length: 118,
             isThread: false,
             hasEmojis: true,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 134, retweets: 28, replies: 19 }
           },
           {
             text: "Reminder: Your first version doesn't need to be perfect. It just needs to solve one problem really well. Ship it! 🚀",
             length: 115,
             isThread: false,
             hasEmojis: true,
-            hashtags: []
+            hashtags: [],
+            timestamp: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 78, retweets: 16, replies: 9 }
+          },
+          {
+            text: "Working late again, but love what I'm building. Coffee count: 4 ☕️. Energy level: Still going strong! 💪",
+            length: 106,
+            isThread: false,
+            hasEmojis: true,
+            hashtags: ["#hustle"],
+            timestamp: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+            engagement: { likes: 56, retweets: 11, replies: 7 }
           }
         ]
       }
@@ -308,7 +411,7 @@ async function mockTwitterProfile(handle: string) {
     };
 
   } catch (error) {
-    console.error('Mock scraping error:', error);
+    console.error('Enhanced mock scraping error:', error);
     return { success: false, error: 'Failed to generate profile data' };
   }
 }

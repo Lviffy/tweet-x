@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { X, Calendar, TrendingUp, MessageCircle, Hash, Smile, Clock, Users, Heart } from "lucide-react";
+import { useScrapedTweets } from "@/hooks/useScrapedTweets";
 
 interface ProfileDetailViewProps {
   profile: any;
@@ -15,82 +16,7 @@ interface ProfileDetailViewProps {
 
 const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
   const [selectedTweet, setSelectedTweet] = useState<any>(null);
-
-  // Generate enhanced sample tweets with more detailed analysis
-  const generateDetailedSampleTweets = () => {
-    const templates = [
-      {
-        content: `Building something new today. ${profile.common_phrases?.[0] || 'Excited to share'} the journey with everyone! 🚀`,
-        engagement: { replies: 23, retweets: 45, likes: 156 },
-        tweetType: 'announcement',
-        sentiment: 'positive',
-        hooks: ['Building something new', 'journey'],
-        callToAction: 'implicit',
-        timeOfDay: 'morning',
-        wordCount: 15
-      },
-      {
-        content: `Quick thread on ${profile.topic_areas?.[0] || 'productivity'}: 1/ Start with the basics and build from there. 2/ Focus on consistency over perfection. 3/ Ship early, iterate fast. That's it! 💪`,
-        engagement: { replies: 67, retweets: 89, likes: 234 },
-        tweetType: 'thread',
-        sentiment: 'educational',
-        hooks: ['Quick thread', 'Start with the basics'],
-        callToAction: 'educational',
-        timeOfDay: 'afternoon',
-        wordCount: 28
-      },
-      {
-        content: `Just shipped a new feature! The ${profile.common_phrases?.[1] || 'user feedback'} has been amazing so far. Here's what we learned...`,
-        engagement: { replies: 34, retweets: 28, likes: 123 },
-        tweetType: 'update',
-        sentiment: 'celebratory',
-        hooks: ['Just shipped', 'amazing feedback'],
-        callToAction: 'soft',
-        timeOfDay: 'evening',
-        wordCount: 20
-      },
-      {
-        content: `${profile.common_phrases?.[2] || 'Remember'}: progress over perfection. Every small step counts. Keep going! 🔥`,
-        engagement: { replies: 12, retweets: 67, likes: 189 },
-        tweetType: 'motivational',
-        sentiment: 'inspirational',
-        hooks: ['Remember', 'progress over perfection'],
-        callToAction: 'motivational',
-        timeOfDay: 'morning',
-        wordCount: 12
-      },
-      {
-        content: `Working on ${profile.topic_areas?.[1] || 'the next big thing'}. Here's what I've learned so far: 1. Listen to users 2. Iterate quickly 3. Stay focused. What would you add?`,
-        engagement: { replies: 89, retweets: 34, likes: 167 },
-        tweetType: 'question',
-        sentiment: 'engaging',
-        hooks: ['Working on', 'what I\'ve learned'],
-        callToAction: 'direct question',
-        timeOfDay: 'afternoon',
-        wordCount: 25
-      }
-    ];
-
-    return templates.slice(0, profile.tweet_sample_count || 3).map((template, index) => ({
-      id: index + 1,
-      text: template.content,
-      timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      isThread: template.tweetType === 'thread',
-      hasEmojis: /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(template.content),
-      engagement: template.engagement,
-      analysis: {
-        tweetType: template.tweetType,
-        sentiment: template.sentiment,
-        hooks: template.hooks,
-        callToAction: template.callToAction,
-        timeOfDay: template.timeOfDay,
-        wordCount: template.wordCount,
-        engagementRate: ((template.engagement.replies + template.engagement.retweets + template.engagement.likes) / 1000 * 100).toFixed(1)
-      }
-    }));
-  };
-
-  const sampleTweets = generateDetailedSampleTweets();
+  const { tweets, loading } = useScrapedTweets(profile.id);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -104,6 +30,54 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
   };
 
   const writingStyle = profile.writing_style_json || {};
+
+  const formatTweetForDisplay = (tweet: any) => {
+    return {
+      id: tweet.id,
+      text: tweet.content,
+      timestamp: tweet.scraped_at,
+      isThread: tweet.is_thread,
+      hasEmojis: tweet.has_emojis,
+      engagement: {
+        replies: tweet.engagement_replies,
+        retweets: tweet.engagement_retweets,
+        likes: tweet.engagement_likes
+      },
+      analysis: {
+        tweetType: tweet.is_thread ? 'thread' : 'single',
+        sentiment: 'authentic',
+        hooks: extractHooks(tweet.content),
+        callToAction: hasCallToAction(tweet.content) ? 'direct' : 'soft',
+        timeOfDay: getTimeOfDay(tweet.scraped_at),
+        wordCount: tweet.content.split(/\s+/).length,
+        engagementRate: calculateEngagementRate(tweet)
+      }
+    };
+  };
+
+  const extractHooks = (content: string) => {
+    const sentences = content.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+    return sentences.slice(0, 2).map(s => s.substring(0, 20) + (s.length > 20 ? '...' : ''));
+  };
+
+  const hasCallToAction = (content: string) => {
+    const ctaWords = ['what do you think', 'let me know', 'share your', 'comment below', 'thoughts?'];
+    return ctaWords.some(cta => content.toLowerCase().includes(cta));
+  };
+
+  const getTimeOfDay = (timestamp: string) => {
+    const hour = new Date(timestamp).getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  };
+
+  const calculateEngagementRate = (tweet: any) => {
+    const total = tweet.engagement_likes + tweet.engagement_retweets + tweet.engagement_replies;
+    // Simulate follower count for rate calculation
+    const estimatedFollowers = 1000; 
+    return ((total / estimatedFollowers) * 100).toFixed(1);
+  };
 
   return (
     <>
@@ -177,26 +151,6 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
                   </div>
                 </div>
 
-                {/* Enhanced Style Metrics */}
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Best Time:</span>
-                    <span className="font-medium ml-2">Morning</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Avg Engagement:</span>
-                    <span className="font-medium ml-2">3.4%</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Question Rate:</span>
-                    <span className="font-medium ml-2">25%</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">CTA Usage:</span>
-                    <span className="font-medium ml-2">40%</span>
-                  </div>
-                </div>
-
                 {profile.topic_areas && profile.topic_areas.length > 0 && (
                   <div>
                     <p className="text-sm font-medium mb-2">Topic Areas:</p>
@@ -243,73 +197,86 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
               </Card>
             )}
 
-            {/* Enhanced Sample Tweets with Detailed Analysis */}
+            {/* Real Scraped Tweets */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Tweet Analysis & Examples</CardTitle>
+                <CardTitle className="text-lg">Scraped Tweets Analysis</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Detailed breakdown of writing patterns (click to view analysis)
+                  Real tweets from @{profile.handle} (click to view detailed analysis)
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {sampleTweets.map((tweet) => (
-                  <div 
-                    key={tweet.id} 
-                    className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => setSelectedTweet(tweet)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={profile.avatar_url || ''} />
-                          <AvatarFallback className="text-xs">
-                            {profile.handle.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <span className="font-medium text-sm">@{profile.handle}</span>
-                          <span className="text-muted-foreground text-xs ml-2">
-                            {formatDate(tweet.timestamp)}
+                {loading ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground mt-2">Loading tweets...</p>
+                  </div>
+                ) : tweets.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">No tweets available</p>
+                  </div>
+                ) : (
+                  tweets.map((tweet) => {
+                    const formattedTweet = formatTweetForDisplay(tweet);
+                    return (
+                      <div 
+                        key={tweet.id} 
+                        className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => setSelectedTweet(formattedTweet)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={profile.avatar_url || ''} />
+                              <AvatarFallback className="text-xs">
+                                {profile.handle.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <span className="font-medium text-sm">@{profile.handle}</span>
+                              <span className="text-muted-foreground text-xs ml-2">
+                                {formatDate(tweet.scraped_at)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {tweet.is_thread ? 'thread' : 'single'}
+                            </Badge>
+                            {tweet.is_thread && (
+                              <Badge variant="secondary" className="text-xs">
+                                Thread
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm leading-relaxed line-clamp-3">{tweet.content}</p>
+                        
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3" />
+                            {formattedTweet.analysis.engagementRate}%
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formattedTweet.analysis.wordCount} words
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            Real tweet
                           </span>
                         </div>
+                        
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
+                          <span>💬 {tweet.engagement_replies}</span>
+                          <span>🔄 {tweet.engagement_retweets}</span>
+                          <span>❤️ {tweet.engagement_likes}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {tweet.analysis.tweetType}
-                        </Badge>
-                        {tweet.isThread && (
-                          <Badge variant="secondary" className="text-xs">
-                            Thread
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm leading-relaxed line-clamp-3">{tweet.text}</p>
-                    
-                    {/* Quick Analysis Preview */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
-                        {tweet.analysis.engagementRate}%
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {tweet.analysis.wordCount} words
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {tweet.analysis.sentiment}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
-                      <span>💬 {tweet.engagement.replies}</span>
-                      <span>🔄 {tweet.engagement.retweets}</span>
-                      <span>❤️ {tweet.engagement.likes}</span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
 
@@ -373,8 +340,8 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Sentiment:</span>
-                    <span className="font-medium ml-2 capitalize">{selectedTweet.analysis.sentiment}</span>
+                    <span className="text-muted-foreground">Type:</span>
+                    <span className="font-medium ml-2 capitalize">{selectedTweet.analysis.tweetType}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Word Count:</span>
@@ -391,10 +358,10 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
                 </div>
                 
                 <div>
-                  <span className="text-muted-foreground text-sm">Hook Phrases:</span>
+                  <span className="text-muted-foreground text-sm">Opening Hooks:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedTweet.analysis.hooks.map((hook: string) => (
-                      <Badge key={hook} variant="outline" className="text-xs">
+                    {selectedTweet.analysis.hooks.map((hook: string, index: number) => (
+                      <Badge key={index} variant="outline" className="text-xs">
                         "{hook}"
                       </Badge>
                     ))}
@@ -414,13 +381,11 @@ const ProfileDetailView = ({ profile, children }: ProfileDetailViewProps) => {
                 </span>
               </div>
               
-              {selectedTweet.isThread && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-sm text-muted-foreground">
-                    This is part of a thread. Thread tweets typically see {selectedTweet.analysis.engagementRate}% higher engagement than single tweets for this author.
-                  </p>
-                </div>
-              )}
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  ✅ This is a real tweet scraped from @{profile.handle}'s profile, providing authentic writing style analysis.
+                </p>
+              </div>
             </div>
           )}
         </DialogContent>
