@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { MessageSquare, Plus, Home, Settings, LogOut, User } from "lucide-react";
+import { MessageSquare, Plus, Home, Settings, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Session {
@@ -32,8 +32,7 @@ export const TweetGeneratorSidebar = () => {
     try {
       setLoading(true);
       
-      // Type-safe query using any to bypass type issues temporarily
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tweet_sessions')
         .select('id, title, created_at')
         .eq('user_id', user?.id)

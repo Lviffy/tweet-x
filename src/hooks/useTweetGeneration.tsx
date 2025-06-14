@@ -50,27 +50,56 @@ export const useTweetGeneration = () => {
     setIsGenerating(true);
     
     try {
-      // For now, let's create mock data until the database types are updated
-      const mockTweets: GeneratedTweet[] = [
-        {
-          id: "1",
-          content: `🚀 Exciting developments in ${topic}! ${includeHashtags ? '#innovation #tech' : ''} ${includeEmojis ? '💡✨' : ''} ${includeCTA ? 'What are your thoughts? Let me know below!' : ''}`,
-          type: format as 'single' | 'thread'
-        }
+      // Create a new session
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('tweet_sessions')
+        .insert([{
+          user_id: user.id,
+          title: `${topic} - ${new Date().toLocaleDateString()}`
+        }])
+        .select()
+        .single();
+
+      if (sessionError) {
+        console.error('Error creating session:', sessionError);
+        throw sessionError;
+      }
+
+      // Generate mock tweets for now (this will be replaced with actual AI generation later)
+      const tweetContents = [
+        `🚀 Exciting developments in ${topic}! ${includeHashtags ? '#innovation #tech' : ''} ${includeEmojis ? '💡✨' : ''} ${includeCTA ? 'What are your thoughts? Let me know below!' : ''}`,
       ];
 
       if (format === 'thread') {
-        mockTweets.push({
-          id: "2",
-          content: `Here's why ${topic} matters: ${includeEmojis ? '👇' : ''}`,
-          type: 'thread'
-        });
-        mockTweets.push({
-          id: "3", 
-          content: `The future of ${topic} looks bright! ${includeHashtags ? '#future #technology' : ''} ${includeCTA ? 'Follow for more insights!' : ''}`,
-          type: 'thread'
-        });
+        tweetContents.push(
+          `Here's why ${topic} matters: ${includeEmojis ? '👇' : ''}`,
+          `The future of ${topic} looks bright! ${includeHashtags ? '#future #technology' : ''} ${includeCTA ? 'Follow for more insights!' : ''}`
+        );
       }
+
+      // Save generated tweets to database
+      const tweetsToInsert = tweetContents.map((content, index) => ({
+        session_id: sessionData.id,
+        content,
+        type: format as 'single' | 'thread',
+        position: index + 1
+      }));
+
+      const { data: tweetsData, error: tweetsError } = await supabase
+        .from('generated_tweets')
+        .insert(tweetsToInsert)
+        .select();
+
+      if (tweetsError) {
+        console.error('Error saving tweets:', tweetsError);
+        throw tweetsError;
+      }
+
+      const mockTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
+        id: tweet.id,
+        content: tweet.content,
+        type: tweet.type as 'single' | 'thread'
+      }));
 
       setGeneratedTweets(mockTweets);
       
@@ -79,7 +108,7 @@ export const useTweetGeneration = () => {
         description: "Your AI-generated tweets are ready."
       });
 
-      return "mock-session-id";
+      return sessionData.id;
     } catch (error) {
       console.error('Tweet generation error:', error);
       toast({
@@ -95,10 +124,25 @@ export const useTweetGeneration = () => {
 
   const loadSession = async (sessionId: string) => {
     try {
-      // Mock loading session for now
-      console.log("Loading session:", sessionId);
-      // For now, just set empty tweets
-      setGeneratedTweets([]);
+      // Load tweets for the session
+      const { data: tweetsData, error: tweetsError } = await supabase
+        .from('generated_tweets')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('position', { ascending: true });
+
+      if (tweetsError) {
+        console.error('Error loading tweets:', tweetsError);
+        throw tweetsError;
+      }
+
+      const tweets: GeneratedTweet[] = tweetsData?.map(tweet => ({
+        id: tweet.id,
+        content: tweet.content,
+        type: tweet.type as 'single' | 'thread'
+      })) || [];
+
+      setGeneratedTweets(tweets);
     } catch (error) {
       console.error('Error loading session:', error);
       toast({

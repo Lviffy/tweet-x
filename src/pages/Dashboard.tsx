@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { MessageSquare, Plus, TrendingUp } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface Session {
   id: string;
@@ -26,25 +28,53 @@ const Dashboard = () => {
       return;
     }
     
-    // Mock data for now until database types are fixed
-    const mockSessions: Session[] = [
-      {
-        id: "1",
-        title: "AI Technology Trends",
-        created_at: new Date().toISOString(),
-        tweet_count: 3
-      },
-      {
-        id: "2", 
-        title: "Social Media Marketing Tips",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        tweet_count: 5
-      }
-    ];
-    
-    setSessions(mockSessions);
-    setLoading(false);
+    fetchSessions();
   }, [user, navigate]);
+
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('tweet_sessions')
+        .select(`
+          id,
+          title,
+          created_at,
+          generated_tweets(count)
+        `)
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError);
+        toast({
+          title: "Error",
+          description: "Failed to load sessions. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Transform the data to include tweet counts
+      const transformedSessions = sessionsData?.map(session => ({
+        ...session,
+        tweet_count: session.generated_tweets?.[0]?.count || 0
+      })) || [];
+
+      setSessions(transformedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load sessions. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSessionClick = (sessionId: string) => {
     navigate(`/tweet-generator/${sessionId}`);
