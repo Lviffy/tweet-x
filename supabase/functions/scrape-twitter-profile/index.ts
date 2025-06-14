@@ -7,273 +7,114 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface TweetData {
-  text: string;
-  length: number;
-  isThread: boolean;
-  hasEmojis: boolean;
-  hashtags: string[];
-  timestamp: string;
-  engagement?: {
-    likes: number;
-    retweets: number;
-    replies: number;
-  };
-}
+// CHANGE: Instead of scraping directly, call the Puppeteer API
 
-interface ProfileAnalysis {
-  writingStyle: {
-    averageWordsPerSentence: number;
-    commonStartPhrases: string[];
-    commonEndPhrases: string[];
-    sentencePatterns: string[];
-    toneKeywords: string[];
-  };
-  commonPhrases: string[];
-  topicAreas: string[];
-  averageTweetLength: number;
-  threadPercentage: number;
-  emojiUsage: number;
-}
+async function fetchPuppeteerProfile(handle: string): Promise<any> {
+  const apiUrl = Deno.env.get('PUPPETEER_API_URL'); // Set this secret in Supabase settings!
+  const apiKey = Deno.env.get('PUPPETEER_API_KEY') || null; // Optional, if used
 
-async function scrapeTwitterProfileData(handle: string) {
-  try {
-    const cleanHandle = handle.replace('@', '');
-    const url = `https://x.com/${cleanHandle}`;
-    const resp = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.8",
-      },
-    });
-
-    if (!resp.ok) {
-      console.error(
-        `Failed to fetch profile page: ${resp.status} ${resp.statusText}`
-      );
-      return {
-        success: false,
-        error: `Could not fetch page (HTTP ${resp.status})`
-      };
-    }
-    const html = await resp.text();
-    console.log('Fetched HTML length:', html.length);
-
-    // Log a preview of the HTML regardless
-    if (html.length < 10000) {
-      console.log('HTML Preview:', html.slice(0, 500));
-    } else {
-      console.log('HTML Preview (first 1000):', html.slice(0, 1000));
-    }
-
-    // 1. Display name extraction
-    let displayName = "";
-    let displayNameSources: string[] = [];
-    let match = html.match(/property="og:title" content="([^"]+)"/i);
-    if (match && match[1]) {
-      displayName = match[1];
-      displayNameSources.push('og:title');
-    }
-    if (!displayName) {
-      match = html.match(/"name":"([^"]+)"/i);
-      if (match && match[1]) {
-        displayName = match[1];
-        displayNameSources.push('json_name');
-      }
-    }
-    if (!displayName) {
-      displayName = cleanHandle;
-      displayNameSources.push('fallback');
-    }
-    console.log('[SCRAPER] displayName sources:', displayNameSources.join(', '), '| Result:', displayName);
-
-    // 2. Bio extraction
-    let bio = "";
-    let bioSources: string[] = [];
-    match = html.match(/<meta property="og:description" content="([^"]+)"/i);
-    if (match && match[1]) {
-      bio = match[1];
-      bioSources.push('og:description');
-    }
-    if (!bio) {
-      match = html.match(/<meta name="description" content="([^"]*)"/i);
-      if (match && match[1]) {
-        bio = match[1];
-        bioSources.push('meta:description');
-      }
-    }
-    if (!bio) {
-      match = html.match(/"description":"([^"]+)"/i);
-      if (match && match[1]) {
-        bio = match[1];
-        bioSources.push('json_description');
-      }
-    }
-    // Try removing trailing /X and clean up
-    bio = bio.replace(/\s*\/\s*X.*$/, '').trim();
-    console.log('[SCRAPER] bio sources:', bioSources.join(', '), '| Result:', bio);
-
-    // 3. Avatar
-    let avatarUrl = "";
-    let avatarSources: string[] = [];
-    match = html.match(/property="og:image" content="([^"]+)"/i);
-    if (match && match[1]) {
-      avatarUrl = match[1];
-      avatarSources.push('og:image');
-    }
-    if (!avatarUrl) {
-      match = html.match(/<meta name="twitter:image" content="([^"]+)"/i);
-      if (match && match[1]) {
-        avatarUrl = match[1];
-        avatarSources.push('twitter:image');
-      }
-    }
-    if (!avatarUrl) {
-      match = html.match(/"profile_image_url_https":"([^"]+)"/i);
-      if (match && match[1]) {
-        avatarUrl = match[1];
-        avatarSources.push('profile_image_url_https');
-      }
-    }
-    console.log('[SCRAPER] avatarUrl sources:', avatarSources.join(', '), '| Result:', avatarUrl);
-
-    // 4. Verified badge
-    let verified = false;
-    if (
-      html.includes('Verified account') ||
-      (html.includes('svg') && html.includes('verified')) ||
-      (html.match(/"verified":(true|false)/i)?.[1] === "true")
-    ) {
-      verified = true;
-    }
-    console.log('[SCRAPER] verified:', verified);
-
-    // 5. Tweet extraction – multiple strategies, fail if no real tweets found
-    let tweets: any[] = [];
-    let tweetExtractionAttempts: string[] = [];
-
-    // a) Current X.com inline tweet splits: data-testid="tweetText"
-    const tweetBlocks = html.split('data-testid="tweetText"');
-    if (tweetBlocks.length > 1) {
-      for (let i = 1; i < Math.min(10, tweetBlocks.length); i++) {
-        const b = tweetBlocks[i];
-        const textMatch = b.match(/>([^<]{8,500})<\/span>/);
-        const text = textMatch ? textMatch[1].trim() : "";
-        if (!text) continue;
-        tweets.push({
-          text,
-          length: text.length,
-          isThread: text.startsWith("1/"),
-          hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
-          hashtags: (text.match(/#\w+/g) || []),
-          timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
-          engagement: {
-            likes: Math.floor(Math.random() * 200),
-            retweets: Math.floor(Math.random() * 50),
-            replies: Math.floor(Math.random() * 15)
-          }
-        });
-      }
-      tweetExtractionAttempts.push('tweetText split');
-    }
-
-    // b) Fallback: Try any <meta property="og:description"> as some pinned tweet
-    if (tweets.length === 0) {
-      match = html.match(/<meta property="og:description" content="([^"]+)"/i);
-      if (match && match[1]) {
-        tweets.push({
-          text: match[1],
-          length: match[1].length,
-          isThread: match[1].startsWith("1/"),
-          hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(match[1]),
-          hashtags: (match[1].match(/#\w+/g) || []),
-          timestamp: new Date(Date.now() - 1 * 48 * 60 * 60 * 1000).toISOString(),
-          engagement: {
-            likes: Math.floor(Math.random() * 200),
-            retweets: Math.floor(Math.random() * 50),
-            replies: Math.floor(Math.random() * 15)
-          }
-        });
-        tweetExtractionAttempts.push('meta og:description');
-      }
-    }
-
-    // c) Fallback: Try class="tweet-text"
-    if (tweets.length === 0) {
-      const classBlocks = html.split('class="tweet-text"');
-      if (classBlocks.length > 1) {
-        for (let i = 1; i < Math.min(6, classBlocks.length); i++) {
-          const b = classBlocks[i];
-          const textMatch = b.match(/>([^<]+)</);
-          const text = textMatch ? textMatch[1].trim() : "";
-          if (!text) continue;
-          tweets.push({
-            text,
-            length: text.length,
-            isThread: text.startsWith("1/"),
-            hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
-          hashtags: (text.match(/#\w+/g) || []),
-            timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
-            engagement: {
-              likes: Math.floor(Math.random() * 200),
-              retweets: Math.floor(Math.random() * 50),
-              replies: Math.floor(Math.random() * 15)
-            }
-          });
-        }
-        tweetExtractionAttempts.push('tweet-text class');
-      }
-    }
-
-    // d) Fallback: Any <span> blocks of 15-280 length
-    if (tweets.length === 0) {
-      const quoteMatches = [...html.matchAll(/>([^<]{15,280})<\/span>/g)];
-      for (let i = 0; i < Math.min(6, quoteMatches.length); i++) {
-        const text = quoteMatches[i][1]?.trim();
-        if (!text) continue;
-        tweets.push({
-          text,
-          length: text.length,
-          isThread: text.startsWith("1/"),
-          hasEmojis: /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}]/u.test(text),
-          hashtags: (text.match(/#\w+/g) || []),
-          timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
-          engagement: {
-            likes: Math.floor(Math.random() * 200),
-            retweets: Math.floor(Math.random() * 50),
-            replies: Math.floor(Math.random() * 15)
-          }
-        });
-      }
-      tweetExtractionAttempts.push('fallback span');
-    }
-
-    console.log('[SCRAPER] Tweet extraction attempts:', tweetExtractionAttempts);
-
-    // If still no tweets, do NOT inject any mock/example tweets.
-    if (tweets.length === 0) {
-      console.warn('[SCRAPER] No tweets found after all extraction attempts. Scraper failed – account may be private, suspended, or the HTML changed.');
-      return {
-        success: false,
-        error: "Failed to extract tweets from profile. Account may be private/suspended or Twitter/X HTML changed."
-      };
-    }
-
-    return {
-      success: true,
-      profile: {
-        displayName,
-        bio,
-        verified,
-        avatarUrl,
-      },
-      tweets: tweets,
-    };
-  } catch (error) {
-    console.error('Web scraping error:', error);
-    return { success: false, error: 'Could not scrape profile page.' };
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { 'x-api-key': apiKey } : {}),
+    },
+    body: JSON.stringify({ handle }),
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Puppeteer API failed: ${errText}`);
   }
+  return await response.json();
+}
+
+function analyzeContent(tweets: any[]): any {
+  const texts = tweets.map(t => t.text);
+  
+  // Analyze writing style with more detail
+  const sentences = texts.join(' ').split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const averageWordsPerSentence = sentences.length > 0 
+    ? Math.round(sentences.reduce((acc, s) => acc + s.trim().split(/\s+/).length, 0) / sentences.length)
+    : 0;
+  
+  // Find common starting phrases
+  const startPhrases = tweets.map(t => {
+    const words = t.text.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return words.slice(0, 2).join(' ');
+    }
+    return words[0] || '';
+  }).filter(phrase => phrase.length > 0);
+  const commonStartPhrases = findMostCommon(startPhrases, 5);
+  
+  // Find common ending phrases
+  const endPhrases = tweets.map(t => {
+    const words = t.text.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return words.slice(-2).join(' ');
+    }
+    return words[words.length - 1] || '';
+  }).filter(phrase => phrase.length > 0);
+  const commonEndPhrases = findMostCommon(endPhrases, 5);
+  
+  // Extract common phrases (2-3 word combinations)
+  const allWords = texts.join(' ').toLowerCase().split(/\s+/);
+  const phrases: string[] = [];
+  for (let i = 0; i < allWords.length - 1; i++) {
+    if (allWords[i].length > 2 && allWords[i + 1].length > 2) {
+      phrases.push(`${allWords[i]} ${allWords[i + 1]}`);
+    }
+  }
+  const commonPhrases = findMostCommon(phrases, 15);
+  
+  // Enhanced topic analysis
+  const topicKeywords = [
+    'startup', 'build', 'product', 'business', 'growth', 'tech', 'ai', 'coding', 
+    'marketing', 'fundraising', 'founder', 'entrepreneur', 'innovation', 'remote',
+    'productivity', 'design', 'development', 'launch', 'mvp', 'feedback'
+  ];
+  const topicAreas = topicKeywords.filter(keyword => 
+    texts.some(text => text.toLowerCase().includes(keyword))
+  );
+  
+  // Calculate metrics
+  const averageTweetLength = tweets.length > 0 
+    ? Math.round(tweets.reduce((acc, t) => acc + t.length, 0) / tweets.length)
+    : 0;
+  const threadCount = tweets.filter(t => t.isThread).length;
+  const threadPercentage = tweets.length > 0 ? Math.round((threadCount / tweets.length) * 100) : 0;
+  const emojiCount = tweets.filter(t => t.hasEmojis).length;
+  const emojiUsage = tweets.length > 0 ? Math.round((emojiCount / tweets.length) * 100) : 0;
+  
+  return {
+    writingStyle: {
+      averageWordsPerSentence,
+      commonStartPhrases,
+      commonEndPhrases,
+      sentencePatterns: ['declarative', 'conversational', 'direct'],
+      toneKeywords: ['authentic', 'helpful', 'insightful', 'practical']
+    },
+    commonPhrases,
+    topicAreas,
+    averageTweetLength,
+    threadPercentage,
+    emojiUsage
+  };
+}
+
+function findMostCommon(items: string[], limit: number): string[] {
+  const frequency: { [key: string]: number } = {};
+  items.forEach(item => {
+    const cleanItem = item.trim().toLowerCase();
+    if (cleanItem.length > 0) {
+      frequency[cleanItem] = (frequency[cleanItem] || 0) + 1;
+    }
+  });
+  
+  return Object.entries(frequency)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, limit)
+    .map(([item]) => item);
 }
 
 serve(async (req) => {
@@ -283,7 +124,7 @@ serve(async (req) => {
 
   try {
     const { handle } = await req.json();
-    
+
     if (!handle) {
       return new Response(JSON.stringify({ error: 'Handle is required' }), {
         status: 400,
@@ -329,10 +170,9 @@ serve(async (req) => {
       });
     }
 
-    // --- USE NEW SCRAPER HERE ---
-    // Call the new real-data scraper instead of the enhancedMockTwitterProfile
-    const scrapedData = await scrapeTwitterProfileData(handle);
-    
+    // Replace built-in Deno scraping with Puppeteer API:
+    const scrapedData = await fetchPuppeteerProfile(handle);
+
     if (!scrapedData.success) {
       return new Response(JSON.stringify({ error: scrapedData.error }), {
         status: 400,
@@ -463,92 +303,3 @@ serve(async (req) => {
     });
   }
 });
-
-function analyzeContent(tweets: TweetData[]): ProfileAnalysis {
-  const texts = tweets.map(t => t.text);
-  
-  // Analyze writing style with more detail
-  const sentences = texts.join(' ').split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const averageWordsPerSentence = sentences.length > 0 
-    ? Math.round(sentences.reduce((acc, s) => acc + s.trim().split(/\s+/).length, 0) / sentences.length)
-    : 0;
-  
-  // Find common starting phrases
-  const startPhrases = tweets.map(t => {
-    const words = t.text.trim().split(/\s+/);
-    if (words.length >= 2) {
-      return words.slice(0, 2).join(' ');
-    }
-    return words[0] || '';
-  }).filter(phrase => phrase.length > 0);
-  const commonStartPhrases = findMostCommon(startPhrases, 5);
-  
-  // Find common ending phrases
-  const endPhrases = tweets.map(t => {
-    const words = t.text.trim().split(/\s+/);
-    if (words.length >= 2) {
-      return words.slice(-2).join(' ');
-    }
-    return words[words.length - 1] || '';
-  }).filter(phrase => phrase.length > 0);
-  const commonEndPhrases = findMostCommon(endPhrases, 5);
-  
-  // Extract common phrases (2-3 word combinations)
-  const allWords = texts.join(' ').toLowerCase().split(/\s+/);
-  const phrases: string[] = [];
-  for (let i = 0; i < allWords.length - 1; i++) {
-    if (allWords[i].length > 2 && allWords[i + 1].length > 2) {
-      phrases.push(`${allWords[i]} ${allWords[i + 1]}`);
-    }
-  }
-  const commonPhrases = findMostCommon(phrases, 15);
-  
-  // Enhanced topic analysis
-  const topicKeywords = [
-    'startup', 'build', 'product', 'business', 'growth', 'tech', 'ai', 'coding', 
-    'marketing', 'fundraising', 'founder', 'entrepreneur', 'innovation', 'remote',
-    'productivity', 'design', 'development', 'launch', 'mvp', 'feedback'
-  ];
-  const topicAreas = topicKeywords.filter(keyword => 
-    texts.some(text => text.toLowerCase().includes(keyword))
-  );
-  
-  // Calculate metrics
-  const averageTweetLength = tweets.length > 0 
-    ? Math.round(tweets.reduce((acc, t) => acc + t.length, 0) / tweets.length)
-    : 0;
-  const threadCount = tweets.filter(t => t.isThread).length;
-  const threadPercentage = tweets.length > 0 ? Math.round((threadCount / tweets.length) * 100) : 0;
-  const emojiCount = tweets.filter(t => t.hasEmojis).length;
-  const emojiUsage = tweets.length > 0 ? Math.round((emojiCount / tweets.length) * 100) : 0;
-  
-  return {
-    writingStyle: {
-      averageWordsPerSentence,
-      commonStartPhrases,
-      commonEndPhrases,
-      sentencePatterns: ['declarative', 'conversational', 'direct'],
-      toneKeywords: ['authentic', 'helpful', 'insightful', 'practical']
-    },
-    commonPhrases,
-    topicAreas,
-    averageTweetLength,
-    threadPercentage,
-    emojiUsage
-  };
-}
-
-function findMostCommon(items: string[], limit: number): string[] {
-  const frequency: { [key: string]: number } = {};
-  items.forEach(item => {
-    const cleanItem = item.trim().toLowerCase();
-    if (cleanItem.length > 0) {
-      frequency[cleanItem] = (frequency[cleanItem] || 0) + 1;
-    }
-  });
-  
-  return Object.entries(frequency)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, limit)
-    .map(([item]) => item);
-}
