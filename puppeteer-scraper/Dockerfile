@@ -56,10 +56,7 @@ RUN npx puppeteer browsers install chrome@stable
 # Verify Chrome installation in the correct location
 RUN ls -la /home/pptruser/.cache/puppeteer/
 
-# Set environment variable for Chrome executable path
-ENV PUPPETEER_EXECUTABLE_PATH=/home/pptruser/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome
-
-# Expose the port your app runs on
+# Expose the port your app runs on (aligned with default PORT)
 EXPOSE 3000
 
 # Start the application

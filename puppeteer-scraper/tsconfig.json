@@ -12,7 +12,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "removeComments": true
+    "removeComments": true,
+    "moduleResolution": "node"
   },
   "include": [
     "*.ts"
