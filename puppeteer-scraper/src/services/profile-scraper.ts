@@ -101,7 +101,7 @@ export async function scrapeTwitterProfile(handle: string): Promise<ScrapeResult
       return {
         title: document.title,
         bodyText: document.body.innerText.substring(0, 500),
-        classes: Array.from(document.querySelectorAll('*')).map(el => el.className).filter(c => c && c.includes('tweet')).slice(0, 10)
+        classes: Array.from(document.querySelectorAll('*')).map((el: Element) => el.className).filter(c => c && c.includes('tweet')).slice(0, 10)
       };
     });
     console.log('Page structure:', pageContent);
@@ -145,6 +145,7 @@ export async function scrapeTwitterProfile(handle: string): Promise<ScrapeResult
 async function extractTweets(page: any): Promise<ScrapedTweet[]> {
   // Updated Nitter selectors based on current structure
   const tweetSelectors = [
+    'article[data-focus]',
     '.timeline-item',
     '.timeline .tweet',
     '.main-tweet',
@@ -153,7 +154,11 @@ async function extractTweets(page: any): Promise<ScrapedTweet[]> {
     'article',
     '[data-tweet-id]',
     '.status-content',
-    '.tweet-text'
+    '.tweet-text',
+    '.tweet-content',
+    '.tweet-body',
+    '.timeline-item .tweet-content',
+    '.tweet .tweet-content'
   ];
 
   let tweets: string[] = [];
@@ -172,7 +177,7 @@ async function extractTweets(page: any): Promise<ScrapedTweet[]> {
           const elements = document.querySelectorAll(sel);
           const texts: string[] = [];
           
-          elements.forEach((el, index) => {
+          elements.forEach((el: Element, index: number) => {
             if (index < 15) { // Limit to 15 tweets max
               // Try multiple ways to extract tweet text
               let text = '';
@@ -221,7 +226,7 @@ async function extractTweets(page: any): Promise<ScrapedTweet[]> {
     
     const generalTweets = await page.evaluate(() => {
       const allText = document.body.innerText;
-      const lines = allText.split('\n').filter(line => {
+      const lines = allText.split('\n').filter((line: string) => {
         const trimmed = line.trim();
         return trimmed.length > 20 && 
                trimmed.length < 300 && 
