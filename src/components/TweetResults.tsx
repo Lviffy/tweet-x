@@ -48,11 +48,10 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="h-full flex flex-col flex-1 min-h-0">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fills all available space */}
-      <div className="relative flex-1 flex flex-col min-h-0">
-        <div className="flex-1 min-h-0 overflow-y-auto rounded-lg bg-transparent">
+      <div className="relative flex-1 flex flex-col min-h-0 h-full">
+        <div className="flex-1 min-h-0 h-full overflow-y-auto rounded-lg bg-transparent">
           {tweets.length === 0 ? (
             <Card className="bg-background/80 backdrop-blur-sm border-white/10">
               <CardContent className="py-12 text-center">
