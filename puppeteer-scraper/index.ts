@@ -1,5 +1,5 @@
 
-// Minimal Node.js Express + Puppeteer API for Twitter/X profile scraping
+// Minimal Node.js Express + Puppeteer API for Twitter/X profile scraping via Nitter
 // Deploy on Render/Railway/Vercel/Fly.io, etc.
 
 import express, { Request, Response } from 'express';
@@ -15,6 +15,15 @@ const API_KEY = process.env.PUPPETEER_API_KEY || null;
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Nitter instances for load balancing and redundancy
+const NITTER_INSTANCES = [
+  'https://nitter.net',
+  'https://nitter.it',
+  'https://nitter.privacydev.net',
+  'https://nitter.unixfox.eu',
+  'https://nitter.domain.glass'
+];
 
 // Cache the Chrome executable path to avoid repeated searches
 let cachedChromePath: string | undefined = undefined;
@@ -83,25 +92,62 @@ async function findChromeExecutable(): Promise<string | undefined> {
   return undefined;
 }
 
+// Function to test Nitter instance availability
+async function testNitterInstance(instance: string): Promise<boolean> {
+  try {
+    const response = await fetch(instance, { 
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    });
+    return response.ok;
+  } catch (error) {
+    console.log(`Nitter instance ${instance} is not available:`, error);
+    return false;
+  }
+}
+
+// Function to get a working Nitter instance
+async function getWorkingNitterInstance(): Promise<string> {
+  console.log('Testing Nitter instances...');
+  
+  for (const instance of NITTER_INSTANCES) {
+    const isWorking = await testNitterInstance(instance);
+    if (isWorking) {
+      console.log(`Using Nitter instance: ${instance}`);
+      return instance;
+    }
+  }
+  
+  // Fallback to first instance if none are working
+  console.log('No Nitter instances responding, using fallback:', NITTER_INSTANCES[0]);
+  return NITTER_INSTANCES[0];
+}
+
 // Health check endpoint
 app.get('/', async (req: Request, res: Response) => {
   const chromeExecutable = await findChromeExecutable();
+  const workingInstance = await getWorkingNitterInstance();
+  
   res.json({ 
     status: 'healthy', 
-    service: 'puppeteer-scraper',
+    service: 'puppeteer-scraper-nitter',
     timestamp: new Date().toISOString(),
     chromeExecutable: chromeExecutable || 'not found',
+    nitterInstance: workingInstance,
     endpoints: ['/scrape-twitter-profile', '/health']
   });
 });
 
 app.get('/health', async (req: Request, res: Response) => {
   const chromeExecutable = await findChromeExecutable();
+  const workingInstance = await getWorkingNitterInstance();
+  
   res.json({ 
     status: 'healthy',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    chromeExecutable: chromeExecutable || 'not found'
+    chromeExecutable: chromeExecutable || 'not found',
+    nitterInstance: workingInstance
   });
 });
 
@@ -120,9 +166,12 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'handle is required' });
     }
 
-    console.log(`Starting scrape for handle: ${handle}`);
+    console.log(`Starting Nitter scrape for handle: ${handle}`);
 
-    const url = `https://x.com/${handle.replace('@', '')}`;
+    // Get working Nitter instance
+    const nitterInstance = await getWorkingNitterInstance();
+    const cleanHandle = handle.replace('@', '');
+    const url = `${nitterInstance}/${cleanHandle}`;
     
     // Find Chrome executable
     const chromeExecutable = await findChromeExecutable();
@@ -132,7 +181,7 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       throw new Error('Chrome executable not found. Please ensure Chrome is properly installed.');
     }
 
-    // Configure Puppeteer for deployment
+    // Configure Puppeteer for deployment with Nitter-optimized settings
     const launchOptions: any = {
       headless: true,
       executablePath: chromeExecutable,
@@ -147,7 +196,8 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
+        '--disable-features=VizDisplayCompositor',
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
       ]
     };
 
@@ -158,36 +208,30 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
 
     const page = await browser.newPage();
     
-    // Set a realistic user agent
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36');
+    // Set headers to appear more like a regular browser
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    });
     
-    console.log(`Navigating to: ${url}`);
+    console.log(`Navigating to Nitter: ${url}`);
     
     await page.goto(url, { 
-      waitUntil: 'networkidle2', 
-      timeout: 60000 
+      waitUntil: 'domcontentloaded', 
+      timeout: 30000 
     });
 
-    console.log('Page loaded, waiting for content...');
+    console.log('Nitter page loaded, extracting content...');
 
-    // Wait for content to load and scroll to load more tweets
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    
-    // Scroll down to load more tweets
-    await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight / 2);
-    });
-    
+    // Wait for content to load
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Multiple selectors to try for tweets (X/Twitter changes these frequently)
+    // Nitter-specific selectors for tweets
     const tweetSelectors = [
-      'div[data-testid="tweetText"]',
-      'div[data-testid="tweetText"] span',
-      'article[data-testid="tweet"] div[lang]',
-      'article div[data-testid="tweetText"]',
-      '[data-testid="tweet"] [lang] span',
-      'article [data-testid="tweetText"] span'
+      '.tweet-content',
+      '.tweet-body',
+      '.timeline-item .tweet-content',
+      '.tweet .tweet-content'
     ];
 
     let tweets: string[] = [];
@@ -195,14 +239,16 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
     // Try each selector until we find tweets
     for (const selector of tweetSelectors) {
       try {
-        console.log(`Trying selector: ${selector}`);
+        console.log(`Trying Nitter selector: ${selector}`);
         
         const elements = await page.$$(selector);
         console.log(`Found ${elements.length} elements with selector: ${selector}`);
         
         if (elements.length > 0) {
           const tweetTexts = await page.$$eval(selector, els => 
-            els.map(el => el.textContent?.trim()).filter(text => text && text.length > 10)
+            els.map(el => el.textContent?.trim())
+              .filter(text => text && text.length > 10)
+              .slice(0, 15) // Limit to 15 tweets max
           );
           
           if (tweetTexts.length > 0) {
@@ -212,53 +258,22 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
           }
         }
       } catch (error) {
-        console.log(`Selector ${selector} failed:`, error);
+        console.log(`Nitter selector ${selector} failed:`, error);
         continue;
       }
     }
 
-    // If no tweets found with specific selectors, try a broader approach
-    if (tweets.length === 0) {
-      console.log('No tweets found with specific selectors, trying broader approach...');
-      
-      try {
-        // Look for any text content in article elements
-        const articleTexts = await page.$$eval('article', articles => 
-          articles.map(article => {
-            // Find text elements that might be tweets
-            const textElements = article.querySelectorAll('div[lang], span[lang], div[dir="auto"]');
-            const texts = Array.from(textElements)
-              .map(el => el.textContent?.trim())
-              .filter(text => text && text.length > 20 && text.length < 500)
-              .filter(text => !text.includes('Show this thread') && !text.includes('Replying to'));
-            
-            return texts;
-          }).flat()
-        );
-        
-        tweets = articleTexts.filter((text, index, arr) => 
-          text && arr.indexOf(text) === index // Remove duplicates
-        ).slice(0, 10);
-        
-        console.log(`Broader approach found ${tweets.length} potential tweets`);
-      } catch (error) {
-        console.log('Broader approach failed:', error);
-      }
-    }
-
-    console.log(`Final tweet count: ${tweets.length}`);
-    console.log('Tweet samples:', tweets.slice(0, 2));
-
-    // Get profile info with multiple selectors
+    // Get profile info with Nitter-specific selectors
     let displayName = handle;
     let bio = '';
+    let verified = false;
 
-    // Try different selectors for display name
+    // Try to get display name from Nitter
     const nameSelectors = [
-      'div[data-testid="UserName"] span',
-      'h2[data-testid="UserName"] span',
-      '[data-testid="UserName"] div span',
-      'h1 span'
+      '.profile-card-fullname',
+      '.profile-name',
+      'h1.profile-fullname',
+      '.profile-card .profile-name'
     ];
 
     for (const selector of nameSelectors) {
@@ -274,12 +289,11 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       }
     }
 
-    // Try different selectors for bio
+    // Try to get bio from Nitter
     const bioSelectors = [
-      'div[data-testid="UserDescription"] span',
-      '[data-testid="UserDescription"]',
-      'div[dir="auto"] span',
-      'div[data-testid="UserDescription"] div'
+      '.profile-bio',
+      '.profile-description',
+      '.profile-card .profile-bio'
     ];
 
     for (const selector of bioSelectors) {
@@ -295,22 +309,35 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       }
     }
 
+    // Check for verification badge in Nitter
+    try {
+      const verificationBadge = await page.$('.icon-ok');
+      verified = !!verificationBadge;
+      console.log(`Verification status: ${verified}`);
+    } catch (error) {
+      verified = false;
+    }
+
     await browser.close();
     browser = null;
 
-    // Minimal result structure (expand as preferred, matches what Lovable expects)
+    console.log(`Nitter scraping completed. Found ${tweets.length} tweets for ${displayName}`);
+
+    // Enhanced result structure with Nitter source
     const result = {
       success: true,
+      source: 'nitter',
+      nitterInstance,
       profile: {
         displayName: displayName || handle,
         bio: bio || '',
-        verified: false, // add detection if required
-        avatarUrl: '', // add scraping code if needed
+        verified,
+        avatarUrl: '', // Nitter doesn't easily provide avatar URLs
       },
       tweets: (tweets || []).slice(0, 8).map((text, i) => ({
         text,
         length: text.length,
-        isThread: text.startsWith('1/') || text.includes('🧵') || text.includes('Thread'),
+        isThread: text.includes('🧵') || text.includes('Thread') || text.includes('1/'),
         hasEmojis: /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(text),
         hashtags: (text.match(/#\w+/g) || []),
         timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -322,13 +349,13 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       })),
     };
 
-    console.log('Scraping completed successfully');
+    console.log('Nitter scraping completed successfully');
     console.log(`Result summary: ${result.tweets.length} tweets found for ${result.profile.displayName}`);
     
     return res.json(result);
 
   } catch (error: any) {
-    console.error('Puppeteer scraping error:', error.message);
+    console.error('Nitter scraping error:', error.message);
     console.error('Stack trace:', error.stack);
     
     // Clean up browser if it exists
@@ -342,21 +369,26 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
     
     return res.status(500).json({ 
       error: error.message,
-      details: 'Check server logs for more information'
+      details: 'Check server logs for more information',
+      source: 'nitter'
     });
   }
 });
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Puppeteer Scraper API running on http://0.0.0.0:${PORT}`);
+  console.log(`Puppeteer Scraper API (Nitter) running on http://0.0.0.0:${PORT}`);
   console.log('Available endpoints:');
   console.log('  GET  / - Service status');
   console.log('  GET  /health - Health check');
-  console.log('  POST /scrape-twitter-profile - Scrape Twitter profile');
+  console.log('  POST /scrape-twitter-profile - Scrape Twitter profile via Nitter');
   
-  // Log Chrome detection on startup
+  // Log Chrome and Nitter detection on startup
   findChromeExecutable().then(chromeExecutable => {
     console.log('Chrome executable detected:', chromeExecutable || 'NONE FOUND');
+  });
+  
+  getWorkingNitterInstance().then(instance => {
+    console.log('Working Nitter instance:', instance);
   });
 });
