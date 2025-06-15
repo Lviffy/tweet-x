@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 
 interface GeneratedTweet {
   id: string;
@@ -81,12 +81,41 @@ const StarredTweetsPage = () => {
       ) : (
         <div className="space-y-6">
           {tweets.map((tweet, i) => (
-            <TweetCard
-              key={tweet.id}
-              tweet={tweet}
-              index={i}
-              onCopy={handleCopy}
-            />
+            <div key={tweet.id} className="relative">
+              <Card className="bg-background/80 backdrop-blur-sm border-white/10">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-sm text-muted-foreground">
+                      Variation {i + 1}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        aria-label="Starred"
+                      >
+                        <Star
+                          className="w-4 h-4 text-yellow-400"
+                          fill="#facc15"
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopy(tweet.content)}
+                        aria-label="Copy tweet"
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="whitespace-pre-wrap leading-relaxed">
+                    {tweet.content}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
       )}
@@ -95,3 +124,4 @@ const StarredTweetsPage = () => {
 };
 
 export default StarredTweetsPage;
+
