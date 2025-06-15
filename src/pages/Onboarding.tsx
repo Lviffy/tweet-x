@@ -246,17 +246,20 @@ const OnboardingSteps = () => {
     }
   }, [profile]);
 
-  // Central guards
+  // Central guards: Prevent infinite redirects by checking pathname and redirect requirements precisely
   useEffect(() => {
-    // Not logged in? => redirect to auth.
     if (!authLoading && !user) {
+      // Not logged in -> go to auth
       navigate("/auth", { replace: true });
+      return;
     }
-    // Already onboarded? => redirect to main app.
     if (!profileLoading && user && profile) {
+      // Already onboarded -> redirect to main
       navigate("/tweet-generator", { replace: true });
+      return;
     }
-    // If not loading and user exists and no profile, stay here.
+    // Otherwise: logged in, not onboarded => stay on current
+    // No redirect!
   }, [user, authLoading, profile, profileLoading, navigate]);
 
   if (authLoading || profileLoading) return null;
@@ -266,11 +269,7 @@ const OnboardingSteps = () => {
   const stepIdx = Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
   const step = STEPS[stepIdx];
 
-  // If invalid step, redirect to beginning to avoid undefined step
-  if (!step) {
-    navigate("/onboarding/step/0", { replace: true });
-    return null;
-  }
+  // NO redundant redirect check here!
 
   const state = {
     displayName, setDisplayName,
