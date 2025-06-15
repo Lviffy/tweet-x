@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,49 +51,63 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   return (
     <div className="space-y-4 h-full flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {tweets.length === 0 ? (
-        <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Your generated tweets will appear here
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6">
-            {/* Single Tweets Section */}
-            {singleTweets.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
-                <div className="space-y-4">
-                  {singleTweets.map((tweet, index) => (
-                    <TweetCard
-                      key={tweet.id}
-                      tweet={tweet}
-                      index={index}
-                      onCopy={onCopyToClipboard}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
+      <div className="relative flex-1">
+        <div
+          className="
+            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
+            max-h-[80vh]
+            overflow-y-auto
+            rounded-lg
+            bg-transparent
+          "
+        >
+          {tweets.length === 0 ? (
+            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  Your generated tweets will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ScrollArea className="h-full pr-4">
+              <div className="space-y-6">
+                {/* Single Tweets Section */}
+                {singleTweets.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
+                    <div className="space-y-4">
+                      {singleTweets.map((tweet, index) => (
+                        <TweetCard
+                          key={tweet.id}
+                          tweet={tweet}
+                          index={index}
+                          onCopy={onCopyToClipboard}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Thread Tweets Section */}
-            {threadVariations.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
-                <ThreadGroup 
-                  threads={threadVariations} 
-                  onCopy={onCopyToClipboard} 
-                />
+                {/* Thread Tweets Section */}
+                {threadVariations.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
+                    <ThreadGroup 
+                      threads={threadVariations} 
+                      onCopy={onCopyToClipboard} 
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </ScrollArea>
-      )}
+            </ScrollArea>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default TweetResults;
+
