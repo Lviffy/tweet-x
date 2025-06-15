@@ -1,104 +1,50 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+
+import React from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import TweetForm from "@/components/TweetForm";
 import TweetResults from "@/components/TweetResults";
 import { TweetGeneratorSidebar } from "@/components/TweetGeneratorSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { useTweetGeneration } from "@/hooks/useTweetGeneration";
-import { useAuth } from "@/hooks/useAuth";
-import { Home } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TweetGeneratorHeader } from "@/components/TweetGeneratorHeader";
+import { useTweetFormState } from "@/hooks/useTweetFormState";
+import { useTweetGeneratorNavigation } from "@/hooks/useTweetGeneratorNavigation";
+import { useTweetGeneratorSession } from "@/hooks/useTweetGeneratorSession";
 
 console.log("TweetGenerator page mounted");
 
-function ErrorBoundary({ children }: { children: React.ReactNode }) {
-  const [error, setError] = useState<Error | null>(null);
-
-  if (error) {
-    return (
-      <div className="p-8 text-red-600 text-center">
-        <h2>Something went wrong while loading the Tweet Generator page.</h2>
-        <p>{error.message}</p>
-      </div>
-    );
-  }
-
-  try {
-    return <>{children}</>;
-  } catch (err) {
-    setError(err as Error);
-    return null;
-  }
-}
-
 const TweetGenerator = () => {
-  const navigate = useNavigate();
-  const { sessionId } = useParams();
-  const { user, loading } = useAuth();
-  const [topic, setTopic] = useState('');
-  const [tone, setTone] = useState('');
-  const [format, setFormat] = useState('single');
-  const [tweetCount, setTweetCount] = useState(3);
-  const [length, setLength] = useState('medium');
-  const [includeHashtags, setIncludeHashtags] = useState(false);
-  const [includeEmojis, setIncludeEmojis] = useState(false);
-  const [includeCTA, setIncludeCTA] = useState(false);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const { user, loading, navigateHome, navigate } = useTweetGeneratorNavigation();
   const { toast } = useToast();
-
-  const { 
-    isGenerating, 
-    generatedTweets, 
-    sessionParams, 
+  
+  const {
+    sessionId,
+    isGenerating,
+    generatedTweets,
+    sessionParams,
     isLoadingSession,
-    generateTweets, 
-    loadSession, 
-    clearSession,
-    setGeneratedTweets 
-  } = useTweetGeneration();
+    generateTweets
+  } = useTweetGeneratorSession();
 
-  // Load session only once when component mounts with sessionId
-  useEffect(() => {
-    if (sessionId && !sessionLoaded && !isLoadingSession) {
-      console.log('Loading session:', sessionId);
-      loadSession(sessionId).then(() => {
-        setSessionLoaded(true);
-      });
-    } else if (!sessionId && !sessionLoaded) {
-      // Clear session for new sessions
-      clearSession();
-      setSessionLoaded(true);
-    }
-  }, [sessionId, sessionLoaded, isLoadingSession, loadSession, clearSession]);
-
-  // Update form fields when session parameters are loaded
-  useEffect(() => {
-    if (sessionParams) {
-      console.log('Updating form with session params:', sessionParams);
-      setTopic(sessionParams.topic || '');
-      setTone(sessionParams.tone || '');
-      setFormat(sessionParams.format || 'single');
-      setTweetCount(sessionParams.tweetCount || 3);
-      setLength(sessionParams.length || 'medium');
-      setIncludeHashtags(sessionParams.includeHashtags || false);
-      setIncludeEmojis(sessionParams.includeEmojis || false);
-      setIncludeCTA(sessionParams.includeCTA || false);
-    }
-  }, [sessionParams]);
-
-  // Redirect to auth if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to use the tweet generator.",
-        variant: "destructive"
-      });
-      navigate("/auth");
-    }
-  }, [user, loading, navigate, toast]);
+  const {
+    topic,
+    tone,
+    format,
+    tweetCount,
+    length,
+    includeHashtags,
+    includeEmojis,
+    includeCTA,
+    setTopic,
+    setTone,
+    setFormat,
+    setTweetCount,
+    setLength,
+    setIncludeHashtags,
+    setIncludeEmojis,
+    setIncludeCTA
+  } = useTweetFormState(sessionParams);
 
   const handleGenerate = async () => {
     // Validate required fields
@@ -186,23 +132,7 @@ const TweetGenerator = () => {
               transition={{ duration: 0.8 }}
               className="max-w-6xl mx-auto"
             >
-              {/* Header with Sidebar Toggle and Home Icon */}
-              <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger />
-                  <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-7 w-7">
-                    <Home className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <h1 className="text-4xl md:text-5xl font-bold mb-0 text-center w-full">
-                    AI Tweet{" "}
-                    <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                      Generator
-                    </span>
-                  </h1>
-                </div>
-              </div>
+              <TweetGeneratorHeader onHomeClick={navigateHome} />
 
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Input Form */}
