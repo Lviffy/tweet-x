@@ -16,6 +16,7 @@ export type Database = {
           id: string
           position: number | null
           session_id: string
+          starred: boolean
           type: string
         }
         Insert: {
@@ -24,6 +25,7 @@ export type Database = {
           id?: string
           position?: number | null
           session_id: string
+          starred?: boolean
           type?: string
         }
         Update: {
@@ -32,6 +34,7 @@ export type Database = {
           id?: string
           position?: number | null
           session_id?: string
+          starred?: boolean
           type?: string
         }
         Relationships: [

@@ -9,6 +9,7 @@ import TweetGenerator from "./pages/TweetGenerator";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import StarredTweetsPage from "./pages/StarredTweets";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/tweet-generator" element={<TweetGenerator />} />
           <Route path="/tweet-generator/:sessionId" element={<TweetGenerator />} />
+          <Route path="/starred-tweets" element={<StarredTweetsPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/auth" element={<AuthPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

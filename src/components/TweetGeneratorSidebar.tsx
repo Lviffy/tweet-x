@@ -1,14 +1,15 @@
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { SidebarSessionList } from "./sidebar/SidebarSessionList";
 import { SidebarUserProfile } from "./sidebar/SidebarUserProfile";
 
 export const TweetGeneratorSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleNewSession = () => {
     // Navigate to tweet generator without session ID to create new session
@@ -16,6 +17,9 @@ export const TweetGeneratorSidebar = () => {
     // Force a page refresh to reset all state
     window.location.href = "/tweet-generator";
   };
+
+  // Active state for sidebar links
+  const isStarPage = location.pathname.startsWith('/starred-tweets');
 
   return (
     <Sidebar>
@@ -32,6 +36,15 @@ export const TweetGeneratorSidebar = () => {
           >
             <Plus className="w-4 h-4 mr-2" />
             New Session
+          </Button>
+
+          <Button
+            variant={isStarPage ? "secondary" : "ghost"}
+            className="w-full flex items-center justify-start"
+            onClick={() => navigate("/starred-tweets")}
+          >
+            <Star className="w-4 h-4 mr-2" />
+            Starred Tweets
           </Button>
 
           <SidebarNavigation />

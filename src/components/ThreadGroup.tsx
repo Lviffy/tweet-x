@@ -2,18 +2,20 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ThreadTweet {
   id: string;
   content: string;
-  type: 'single' | 'thread';
+  type: "single" | "thread";
+  starred?: boolean;
 }
 
 interface ThreadGroupProps {
@@ -23,16 +25,54 @@ interface ThreadGroupProps {
 
 const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
   const [openThreads, setOpenThreads] = useState<{ [key: number]: boolean }>({});
+  const [starredMap, setStarredMap] = useState<{ [tweetId: string]: boolean }>({});
 
   const toggleThread = (index: number) => {
-    setOpenThreads(prev => ({
+    setOpenThreads((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
   const formatThreadContent = (threadTweets: ThreadTweet[]) => {
-    return threadTweets.map(tweet => tweet.content).join('\n\n');
+    return threadTweets.map((tweet) => tweet.content).join("\n\n");
+  };
+
+  // Star/unstar ALL in thread variation
+  const handleStarThread = async (threadTweets: ThreadTweet[]) => {
+    // Determine if we're starring or unstarring
+    const isAnyUnstarred = threadTweets.some((t) => !(starredMap[t.id] ?? t.starred));
+    const newStarState = isAnyUnstarred; // true if ANY are unstarred
+    const ids = threadTweets.map((t) => t.id);
+    // Optimistic update
+    setStarredMap((prev) => {
+      const m = { ...prev };
+      ids.forEach((id) => (m[id] = newStarState));
+      return m;
+    });
+    try {
+      // Update all at once
+      await supabase
+        .from("generated_tweets")
+        .update({ starred: newStarState })
+        .in("id", ids);
+    } catch (e) {
+      // Revert all if fail
+      setStarredMap((prev) => {
+        const m = { ...prev };
+        ids.forEach((id) => (m[id] = !newStarState));
+        return m;
+      });
+    }
+  };
+
+  const singleTweetStarToggle = async (tweetId: string, currentVal: boolean) => {
+    setStarredMap((m) => ({ ...m, [tweetId]: !currentVal }));
+    try {
+      await supabase.from("generated_tweets").update({ starred: !currentVal }).eq("id", tweetId);
+    } catch (e) {
+      setStarredMap((m) => ({ ...m, [tweetId]: currentVal })); // revert
+    }
   };
 
   return (
@@ -51,12 +91,46 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
                   Thread {index + 1} ({threadVariation.length} tweets)
                 </span>
                 <div className="flex gap-2">
+                  {/* Copy entire thread */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onCopy(formatThreadContent(threadVariation))}
                   >
                     <Copy className="w-4 h-4" />
+                  </Button>
+                  {/* Star/Unstar ALL in this thread */}
+                  <Button
+                    variant={
+                      threadVariation.every(
+                        (tweet) =>
+                          (starredMap[tweet.id] ?? tweet.starred) === true
+                      )
+                        ? "default"
+                        : "ghost"
+                    }
+                    size="sm"
+                    onClick={() => handleStarThread(threadVariation)}
+                    aria-label="Star/Unstar entire thread"
+                  >
+                    <Star
+                      className={`w-4 h-4 ${
+                        threadVariation.every(
+                          (tweet) =>
+                            (starredMap[tweet.id] ?? tweet.starred) === true
+                        )
+                          ? "text-yellow-400 fill-yellow-400"
+                          : ""
+                      }`}
+                      fill={
+                        threadVariation.every(
+                          (tweet) =>
+                            (starredMap[tweet.id] ?? tweet.starred) === true
+                        )
+                          ? "#facc15"
+                          : "none"
+                      }
+                    />
                   </Button>
                   <Collapsible
                     open={openThreads[index]}
@@ -74,12 +148,12 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
                   </Collapsible>
                 </div>
               </div>
-              
-              {/* Show first tweet preview when collapsed */}
+
+              {/* Preview first tweet when collapsed */}
               {!openThreads[index] && (
                 <p className="whitespace-pre-wrap leading-relaxed text-sm text-muted-foreground">
                   {threadVariation[0]?.content.substring(0, 100)}
-                  {threadVariation[0]?.content.length > 100 ? '...' : ''}
+                  {threadVariation[0]?.content.length > 100 ? "..." : ""}
                 </p>
               )}
 
@@ -105,13 +179,48 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
                               <span className="text-xs text-muted-foreground">
                                 Tweet {tweetIndex + 1}
                               </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onCopy(tweet.content)}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
+                              <div className="flex gap-1">
+                                {/* Individual star for this tweet */}
+                                <Button
+                                  variant={
+                                    (starredMap[tweet.id] ?? tweet.starred)
+                                      ? "default"
+                                      : "ghost"
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    singleTweetStarToggle(
+                                      tweet.id,
+                                      starredMap[tweet.id] ?? !!tweet.starred
+                                    )
+                                  }
+                                  aria-label={
+                                    starredMap[tweet.id] ?? tweet.starred
+                                      ? "Unstar tweet"
+                                      : "Star tweet"
+                                  }
+                                >
+                                  <Star
+                                    className={`w-3 h-3 ${
+                                      (starredMap[tweet.id] ?? tweet.starred)
+                                        ? "text-yellow-400 fill-yellow-400"
+                                        : ""
+                                    }`}
+                                    fill={
+                                      (starredMap[tweet.id] ?? tweet.starred)
+                                        ? "#facc15"
+                                        : "none"
+                                    }
+                                  />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onCopy(tweet.content)}
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="whitespace-pre-wrap leading-relaxed text-sm">
                               {tweet.content}

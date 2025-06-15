@@ -1,21 +1,47 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Copy } from "lucide-react";
+import { Copy, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TweetCardProps {
   tweet: {
     id: string;
     content: string;
     type: 'single' | 'thread';
+    starred?: boolean;
   };
   index: number;
   onCopy: (content: string) => void;
+  onStarToggle?: (tweetId: string, starred: boolean) => void;
 }
 
-const TweetCard = ({ tweet, index, onCopy }: TweetCardProps) => {
+const TweetCard = ({ tweet, index, onCopy, onStarToggle }: TweetCardProps) => {
+  const [starred, setStarred] = useState(tweet.starred ?? false);
+  const [saving, setSaving] = useState(false);
+
+  // Handle optimistic Star/Unstar
+  const handleStar = async () => {
+    if (!tweet.id) return;
+    setSaving(true);
+    const newStarred = !starred;
+    setStarred(newStarred);
+    try {
+      // update local, then db
+      const { error } = await supabase
+        .from('generated_tweets')
+        .update({ starred: newStarred })
+        .eq('id', tweet.id);
+      if (error) throw error;
+      if (onStarToggle) onStarToggle(tweet.id, newStarred);
+    } catch (e) {
+      setStarred(!newStarred); // revert on fail
+    }
+    setSaving(false);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -28,13 +54,24 @@ const TweetCard = ({ tweet, index, onCopy }: TweetCardProps) => {
             <span className="text-sm text-muted-foreground">
               Variation {index + 1}
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCopy(tweet.content)}
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCopy(tweet.content)}
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={starred ? "default" : "ghost"}
+                size="sm"
+                onClick={handleStar}
+                aria-label={starred ? "Unstar tweet" : "Star tweet"}
+                disabled={saving}
+              >
+                <Star className={`w-4 h-4 ${starred ? "text-yellow-400 fill-yellow-400" : ""}`} fill={starred ? "#facc15" : "none"} />
+              </Button>
+            </div>
           </div>
           <p className="whitespace-pre-wrap leading-relaxed">
             {tweet.content}
