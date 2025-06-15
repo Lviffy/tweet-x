@@ -2,9 +2,12 @@
 {
   "name": "puppeteer-scraper",
   "version": "1.0.0",
+  "description": "Puppeteer scraper for Twitter profiles",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "dev": "ts-node index.ts"
   },
   "dependencies": {
     "puppeteer": "^21.0.0",
@@ -17,5 +20,8 @@
     "@types/node": "^20.0.0",
     "@types/express": "^4.17.0",
     "@types/cors": "^2.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
