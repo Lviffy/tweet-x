@@ -59,35 +59,47 @@ serve(async (req) => {
     
     console.log('Binary audio size:', binaryAudio.length);
 
-    // Prepare form data for OpenAI Whisper
-    const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'en');
+    // Convert binary audio to base64 for Google Speech API
+    const base64Audio = btoa(String.fromCharCode(...binaryAudio));
 
-    console.log('Sending to OpenAI Whisper API');
+    console.log('Sending to Google Speech-to-Text API');
 
-    // Send to OpenAI Whisper API
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    // Send to Google Speech-to-Text API
+    const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${Deno.env.get('GEMINI_API_KEY')}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({
+        config: {
+          encoding: 'WEBM_OPUS',
+          sampleRateHertz: 48000,
+          languageCode: 'en-US',
+          model: 'latest_short',
+        },
+        audio: {
+          content: base64Audio,
+        },
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      console.error('Google Speech API error:', response.status, errorText);
+      throw new Error(`Google Speech API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
     console.log('Transcription result:', result);
 
+    // Extract text from Google Speech API response
+    let transcribedText = '';
+    if (result.results && result.results.length > 0) {
+      transcribedText = result.results[0].alternatives[0].transcript;
+    }
+
     return new Response(
-      JSON.stringify({ text: result.text }),
+      JSON.stringify({ text: transcribedText }),
       { 
         headers: { 
           ...corsHeaders, 
