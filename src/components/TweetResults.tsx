@@ -48,52 +48,61 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-[90vh] flex flex-col min-h-0 flex-1">
+    <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-
-      {/* This section fills to the parent and inner content scrolls if needed */}
+      {/* Parent scrollable container */}
       <div className="relative flex-1 flex flex-col min-h-0">
-        {tweets.length === 0 ? (
-          <Card className="bg-background/80 backdrop-blur-sm border-white/10 h-full flex items-center">
-            <CardContent className="py-12 text-center w-full">
-              <p className="text-muted-foreground">
-                Your generated tweets will appear here
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <ScrollArea className="flex-1 min-h-0 flex flex-col pr-4">
-            <div className="space-y-6 flex-1 flex flex-col min-h-0">
-              {/* Single Tweets Section */}
-              {singleTweets.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
+        <div
+          className="
+            flex flex-col h-full min-h-0
+            max-h-full
+            overflow-y-visible
+            rounded-lg
+            bg-transparent
+          "
+        >
+          {tweets.length === 0 ? (
+            <Card className="bg-background/80 backdrop-blur-sm border-white/10 h-full flex items-center">
+              <CardContent className="py-12 text-center w-full">
+                <p className="text-muted-foreground">
+                  Your generated tweets will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ScrollArea className="h-full pr-4">
+              <div className="space-y-6">
+                {/* Single Tweets Section */}
+                {singleTweets.length > 0 && (
                   <div className="space-y-4">
-                    {singleTweets.map((tweet, index) => (
-                      <TweetCard
-                        key={tweet.id}
-                        tweet={tweet}
-                        index={index}
-                        onCopy={onCopyToClipboard}
-                      />
-                    ))}
+                    <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
+                    <div className="space-y-4">
+                      {singleTweets.map((tweet, index) => (
+                        <TweetCard
+                          key={tweet.id}
+                          tweet={tweet}
+                          index={index}
+                          onCopy={onCopyToClipboard}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Thread Tweets Section */}
-              {threadVariations.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
-                  <ThreadGroup 
-                    threads={threadVariations} 
-                    onCopy={onCopyToClipboard} 
-                  />
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        )}
+                {/* Thread Tweets Section */}
+                {threadVariations.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
+                    <ThreadGroup 
+                      threads={threadVariations} 
+                      onCopy={onCopyToClipboard} 
+                    />
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
       </div>
     </div>
   );
