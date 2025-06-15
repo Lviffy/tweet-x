@@ -48,7 +48,7 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-[80vh] flex flex-col">
+    <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
       {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
       <div className="relative flex-1">
