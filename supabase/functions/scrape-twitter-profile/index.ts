@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -8,21 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// CHANGE: Updated to call the correct endpoint
+// Updated to use your deployed Puppeteer service
 async function fetchPuppeteerProfile(handle: string): Promise<any> {
-  const apiUrl = Deno.env.get('PUPPETEER_API_URL'); // Should be https://puppeteer-rtug.onrender.com
-  const apiKey = Deno.env.get('PUPPETEER_API_KEY') || null; // Optional, if used
+  // Use your actual deployed URL from Render
+  const apiUrl = 'https://puppeteer-scraper-ko7.onrender.com';
+  const apiKey = Deno.env.get('PUPPETEER_API_KEY') || null; // Optional
 
-  if (!apiUrl) {
-    throw new Error('PUPPETEER_API_URL environment variable is not set');
-  }
+  console.log('Calling Puppeteer API at:', `${apiUrl}/scrape-twitter-profile`);
 
-  // Make sure to call the correct endpoint
-  const fullUrl = `${apiUrl}/scrape-twitter-profile`;
-  
-  console.log('Calling Puppeteer API at:', fullUrl);
-
-  const response = await fetch(fullUrl, {
+  const response = await fetch(`${apiUrl}/scrape-twitter-profile`, {
     method: 'POST',
     headers: {
       "Content-Type": "application/json",
