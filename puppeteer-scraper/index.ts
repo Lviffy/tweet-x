@@ -1,4 +1,3 @@
-
 // Minimal Node.js Express + Puppeteer API for Twitter/X profile scraping
 // Deploy on Render/Railway/Vercel/Fly.io, etc.
 
@@ -229,7 +228,7 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
   }
 });
 
-const PORT = process.env.PORT || 3030;
+const PORT = parseInt(process.env.PORT || '3030', 10);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Puppeteer Scraper API running on http://0.0.0.0:${PORT}`);
   console.log('Available endpoints:');
