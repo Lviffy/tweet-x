@@ -3,6 +3,7 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, Sid
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -170,13 +171,25 @@ export const TweetGeneratorSidebar = () => {
                   {sessions.map((session) => (
                     <SidebarMenuItem key={session.id}>
                       <div className="flex items-center w-full">
-                        <SidebarMenuButton 
-                          onClick={() => handleSessionClick(session.id)}
-                          className="flex-1 justify-start"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          <span className="truncate">{session.title}</span>
-                        </SidebarMenuButton>
+                        <HoverCard>
+                          <HoverCardTrigger asChild>
+                            <SidebarMenuButton 
+                              onClick={() => handleSessionClick(session.id)}
+                              className="flex-1 justify-start"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              <span className="truncate">{session.title}</span>
+                            </SidebarMenuButton>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80" side="right">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">{session.title}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                Created: {new Date(session.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
                         <Button
                           variant="ghost"
                           size="sm"
