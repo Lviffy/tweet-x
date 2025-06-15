@@ -169,6 +169,7 @@ export type Database = {
           include_cta: boolean | null
           include_emojis: boolean | null
           include_hashtags: boolean | null
+          length: string | null
           title: string
           tone: string | null
           topic: string | null
@@ -184,6 +185,7 @@ export type Database = {
           include_cta?: boolean | null
           include_emojis?: boolean | null
           include_hashtags?: boolean | null
+          length?: string | null
           title: string
           tone?: string | null
           topic?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           include_cta?: boolean | null
           include_emojis?: boolean | null
           include_hashtags?: boolean | null
+          length?: string | null
           title?: string
           tone?: string | null
           topic?: string | null

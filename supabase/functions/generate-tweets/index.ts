@@ -20,6 +20,7 @@ serve(async (req) => {
   try {
     const requestData: TweetGenerationRequest = await req.json();
     const { 
+      handles = [],
       topic, 
       tone, 
       format, 
@@ -48,6 +49,9 @@ serve(async (req) => {
     if (!tweetCount || tweetCount < 1 || tweetCount > 10) {
       throw new Error('Tweet count must be between 1 and 10');
     }
+    if (!length || !['short', 'medium', 'long'].includes(length)) {
+      throw new Error('Valid length is required (short, medium, or long)');
+    }
 
     // Authenticate user
     const authHeader = req.headers.get('authorization');
@@ -59,7 +63,7 @@ serve(async (req) => {
       tone,
       format: format || 'single',
       tweetCount,
-      length: length || 'medium',
+      length,
       includeHashtags: includeHashtags || false,
       includeEmojis: includeEmojis || false,
       includeCTA: includeCTA || false
