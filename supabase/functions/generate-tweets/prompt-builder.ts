@@ -45,14 +45,14 @@ export function createDetailedPrompt(params: TweetGenerationRequest): string {
     prompt += `- Each tweet should offer unique value\n`;
   }
 
-  // Additional options
-  const options: string[] = [];
-  if (includeHashtags) options.push("Include 2-3 relevant hashtags");
-  if (includeEmojis) options.push("Use emojis strategically for engagement");
-  if (includeCTA) options.push("Include compelling calls-to-action");
+  // Only include additional options if they are actually selected
+  const enabledOptions: string[] = [];
+  if (includeHashtags) enabledOptions.push("Include 2-3 relevant hashtags");
+  if (includeEmojis) enabledOptions.push("Use emojis strategically for engagement");
+  if (includeCTA) enabledOptions.push("Include compelling calls-to-action");
   
-  if (options.length > 0) {
-    prompt += `\nADDITIONAL OPTIONS:\n- ${options.join('\n- ')}\n`;
+  if (enabledOptions.length > 0) {
+    prompt += `\nADDITIONAL OPTIONS:\n- ${enabledOptions.join('\n- ')}\n`;
   }
 
   prompt += `\nCRITICAL REQUIREMENTS:\n`;
