@@ -13,6 +13,7 @@ interface TweetFormProps {
   tone: string;
   format: string;
   tweetCount: number;
+  length: string;
   includeHashtags: boolean;
   includeEmojis: boolean;
   includeCTA: boolean;
@@ -21,6 +22,7 @@ interface TweetFormProps {
   onToneChange: (tone: string) => void;
   onFormatChange: (format: string) => void;
   onTweetCountChange: (count: number) => void;
+  onLengthChange: (length: string) => void;
   onIncludeHashtagsChange: (include: boolean) => void;
   onIncludeEmojisChange: (include: boolean) => void;
   onIncludeCTAChange: (include: boolean) => void;
@@ -32,6 +34,7 @@ const TweetForm = ({
   tone,
   format,
   tweetCount,
+  length,
   includeHashtags,
   includeEmojis,
   includeCTA,
@@ -40,6 +43,7 @@ const TweetForm = ({
   onToneChange,
   onFormatChange,
   onTweetCountChange,
+  onLengthChange,
   onIncludeHashtagsChange,
   onIncludeEmojisChange,
   onIncludeCTAChange,
@@ -65,6 +69,12 @@ const TweetForm = ({
     { value: 5, label: '5 Variations' },
     { value: 8, label: '8 Variations' },
     { value: 10, label: '10 Variations' }
+  ];
+
+  const lengthOptions = [
+    { value: 'short', label: 'Short (1-2 lines)' },
+    { value: 'medium', label: 'Medium (3-5 lines)' },
+    { value: 'long', label: 'Long (6+ lines)' }
   ];
 
   return (
@@ -114,6 +124,23 @@ const TweetForm = ({
             </SelectTrigger>
             <SelectContent>
               {formatOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Length */}
+        <div className="space-y-2">
+          <Label>Tweet Length</Label>
+          <Select value={length} onValueChange={onLengthChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {lengthOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

@@ -23,7 +23,8 @@ serve(async (req) => {
       topic, 
       tone, 
       format, 
-      tweetCount, 
+      tweetCount,
+      length,
       includeHashtags, 
       includeEmojis, 
       includeCTA 
@@ -33,7 +34,8 @@ serve(async (req) => {
       topic: topic?.substring(0, 50) + '...', 
       tone, 
       format, 
-      tweetCount 
+      tweetCount,
+      length
     });
 
     // Validate required fields
@@ -51,12 +53,13 @@ serve(async (req) => {
     const authHeader = req.headers.get('authorization');
     const { user, supabase } = await authenticateUser(authHeader);
     
-    // Generate AI prompt without profile data
+    // Generate AI prompt with length parameter
     const prompt = createDetailedPrompt({
       topic,
       tone,
       format: format || 'single',
       tweetCount,
+      length: length || 'medium',
       includeHashtags: includeHashtags || false,
       includeEmojis: includeEmojis || false,
       includeCTA: includeCTA || false

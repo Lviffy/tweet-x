@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ interface TweetGenerationParams {
   tone: string;
   format: string;
   tweetCount: number;
+  length: string;
   includeHashtags: boolean;
   includeEmojis: boolean;
   includeCTA: boolean;
@@ -60,7 +60,7 @@ export const useTweetGeneration = () => {
       return null;
     }
 
-    const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = params;
+    const { handles, topic, tone, format, tweetCount, length, includeHashtags, includeEmojis, includeCTA } = params;
 
     if (!topic.trim() || !tone) {
       toast({
@@ -86,6 +86,7 @@ export const useTweetGeneration = () => {
             tone: tone,
             format: format,
             tweet_count: tweetCount,
+            length: length,
             include_hashtags: includeHashtags,
             include_emojis: includeEmojis,
             include_cta: includeCTA
@@ -108,6 +109,7 @@ export const useTweetGeneration = () => {
             tone,
             format,
             tweetCount,
+            length,
             includeHashtags,
             includeEmojis,
             includeCTA
@@ -236,6 +238,7 @@ export const useTweetGeneration = () => {
         tone: sessionRecord.tone || '',
         format: sessionRecord.format || 'single',
         tweetCount: sessionRecord.tweet_count || 3,
+        length: sessionRecord.length || 'medium',
         includeHashtags: sessionRecord.include_hashtags || false,
         includeEmojis: sessionRecord.include_emojis || false,
         includeCTA: sessionRecord.include_cta || false

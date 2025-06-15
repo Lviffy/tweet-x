@@ -10,6 +10,7 @@ export interface TweetGenerationRequest {
   tone: string;
   format: string;
   tweetCount: number;
+  length: string;
   includeHashtags: boolean;
   includeEmojis: boolean;
   includeCTA: boolean;

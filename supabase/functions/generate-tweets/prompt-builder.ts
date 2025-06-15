@@ -2,12 +2,29 @@
 import { TweetGenerationRequest } from './types.ts';
 
 export function createDetailedPrompt(params: TweetGenerationRequest): string {
-  const { topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = params;
+  const { topic, tone, format, tweetCount, length, includeHashtags, includeEmojis, includeCTA } = params;
   
   let prompt = `You are an expert Twitter content creator. Generate EXACTLY ${tweetCount} ${format.includes('thread') ? 'complete thread variations' : 'individual tweets'} about: "${topic}"\n\n`;
 
   // Add tone context
   prompt += `TONE: ${tone} - Write in this specific style and voice.\n\n`;
+
+  // Add length requirements
+  let lengthInstructions = '';
+  switch (length) {
+    case 'short':
+      lengthInstructions = 'Keep tweets SHORT and concise (1-2 lines, 80-150 characters). Focus on punchy, impactful statements.';
+      break;
+    case 'medium':
+      lengthInstructions = 'Write MEDIUM length tweets (3-5 lines, 150-220 characters). Provide good detail while staying engaging.';
+      break;
+    case 'long':
+      lengthInstructions = 'Create LONG form tweets (6+ lines, 220-280 characters). Include comprehensive information and context.';
+      break;
+    default:
+      lengthInstructions = 'Write tweets of appropriate length for the content.';
+  }
+  prompt += `LENGTH: ${lengthInstructions}\n\n`;
 
   // Format-specific instructions
   if (format.includes('thread')) {
@@ -25,7 +42,6 @@ export function createDetailedPrompt(params: TweetGenerationRequest): string {
     prompt += `- Create EXACTLY ${tweetCount} standalone tweets\n`;
     prompt += `- Number each tweet: "Tweet 1:", "Tweet 2:", etc.\n`;
     prompt += `- Each tweet must be complete and engaging\n`;
-    prompt += `- Keep tweets between 150-280 characters\n`;
     prompt += `- Each tweet should offer unique value\n`;
   }
 
@@ -43,6 +59,7 @@ export function createDetailedPrompt(params: TweetGenerationRequest): string {
   prompt += `- Output EXACTLY ${tweetCount} ${format.includes('thread') ? 'thread variations' : 'tweets'}\n`;
   prompt += `- Each ${format.includes('thread') ? 'thread' : 'tweet'} must be clearly numbered and separated\n`;
   prompt += `- Stay within Twitter's 280 character limit per tweet\n`;
+  prompt += `- Follow the ${length} length guidelines strictly\n`;
   prompt += `- Make content immediately engaging and shareable\n`;
   prompt += `- NO additional commentary or explanations\n\n`;
 

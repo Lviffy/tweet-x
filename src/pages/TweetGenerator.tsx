@@ -41,6 +41,7 @@ const TweetGenerator = () => {
   const [tone, setTone] = useState('');
   const [format, setFormat] = useState('single');
   const [tweetCount, setTweetCount] = useState(3);
+  const [length, setLength] = useState('medium');
   const [includeHashtags, setIncludeHashtags] = useState(false);
   const [includeEmojis, setIncludeEmojis] = useState(false);
   const [includeCTA, setIncludeCTA] = useState(false);
@@ -80,6 +81,7 @@ const TweetGenerator = () => {
       setTone(sessionParams.tone || '');
       setFormat(sessionParams.format || 'single');
       setTweetCount(sessionParams.tweetCount || 3);
+      setLength(sessionParams.length || 'medium');
       setIncludeHashtags(sessionParams.includeHashtags || false);
       setIncludeEmojis(sessionParams.includeEmojis || false);
       setIncludeCTA(sessionParams.includeCTA || false);
@@ -123,6 +125,7 @@ const TweetGenerator = () => {
       tone,
       format,
       tweetCount,
+      length,
       includeHashtags,
       includeEmojis,
       includeCTA
@@ -134,6 +137,7 @@ const TweetGenerator = () => {
       tone,
       format,
       tweetCount,
+      length,
       includeHashtags,
       includeEmojis,
       includeCTA
@@ -207,6 +211,7 @@ const TweetGenerator = () => {
                   tone={tone}
                   format={format}
                   tweetCount={tweetCount}
+                  length={length}
                   includeHashtags={includeHashtags}
                   includeEmojis={includeEmojis}
                   includeCTA={includeCTA}
@@ -215,6 +220,7 @@ const TweetGenerator = () => {
                   onToneChange={setTone}
                   onFormatChange={setFormat}
                   onTweetCountChange={setTweetCount}
+                  onLengthChange={setLength}
                   onIncludeHashtagsChange={setIncludeHashtags}
                   onIncludeEmojisChange={setIncludeEmojis}
                   onIncludeCTAChange={setIncludeCTA}
