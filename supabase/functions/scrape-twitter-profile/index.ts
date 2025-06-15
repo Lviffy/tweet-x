@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
@@ -7,10 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Updated to use your deployed Puppeteer service
+// Updated to use your correct deployed URL
 async function fetchPuppeteerProfile(handle: string): Promise<any> {
   // Use your actual deployed URL from Render
-  const apiUrl = 'https://puppeteer-scraper-ko7.onrender.com';
+  const apiUrl = 'https://puppeteer-scraper-lxo7.onrender.com';
   const apiKey = Deno.env.get('PUPPETEER_API_KEY') || null; // Optional
 
   console.log('Calling Puppeteer API at:', `${apiUrl}/scrape-twitter-profile`);
