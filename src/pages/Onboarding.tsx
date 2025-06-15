@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -66,14 +66,111 @@ const STEP_DESCRIPTIONS: Record<string, string> = {
   interests: "We'll use these to craft relevant tweets (select multiple).",
 };
 
-const Onboarding = () => {
+const Welcome = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-background via-background to-gray-900/20">
+      <Card className="w-full max-w-md shadow-lg bg-background/90 border-white/10">
+        <CardHeader>
+          <CardTitle className="text-center">Welcome 👋</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-8 text-center text-muted-foreground">
+            Let’s personalize your experience. This helps us create relevant tweets for you.
+          </div>
+          <button
+            className="w-full bg-primary text-white py-2 rounded-lg transition-all hover:bg-primary/90"
+            onClick={() => navigate("/onboarding/step/0")}
+            data-testid="start-onboarding"
+          >
+            Get Started
+          </button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const StepScreen = ({
+  stepIndex,
+  totalSteps,
+  state,
+  setState,
+  handleNext,
+  handleBack,
+  handleFinish,
+  error,
+  setError
+}: {
+  stepIndex: number, totalSteps: number,
+  state: any, setState: any,
+  handleNext: () => void, handleBack: () => void, handleFinish: () => void, 
+  error: string | null, setError: (err: string | null) => void
+}) => {
+  const showBack = stepIndex > 0;
+  const isLast = stepIndex === totalSteps - 1;
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-gray-900/20 px-4">
+      <Card className="w-full max-w-2xl shadow-xl bg-background/90 backdrop-blur border-white/10">
+        <CardHeader>
+          <CardTitle>
+            <OnboardingProgressBar 
+              steps={STEPS}
+              currentStep={stepIndex}
+              stepDescriptions={STEP_DESCRIPTIONS}
+            />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="space-y-6"
+            onSubmit={e => {
+              e.preventDefault();
+              if (isLast) {
+                handleFinish();
+              } else {
+                handleNext();
+              }
+            }}
+          >
+            <OnboardingStepContent
+              currentStep={STEPS[stepIndex]}
+              stepTitles={STEP_TITLES}
+              {...state}
+              {...setState}
+              industryOptions={INDUSTRY_OPTIONS}
+              goalsOptions={GOALS_OPTIONS}
+              interestsOptions={INTERESTS_OPTIONS}
+              toggleSelection={setState.toggleSelection}
+            />
+            {error && (
+              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                {error}
+              </div>
+            )}
+            <OnboardingNavigation
+              showBack={showBack}
+              isLast={isLast}
+              onBack={handleBack}
+              onNext={handleNext}
+              onFinish={handleFinish}
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const OnboardingRouter = () => {
   const { profile, loading, saveProfile } = useUserProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { stepIndex } = useParams<{ stepIndex: string }>();
+  const location = useLocation();
 
-  const [step, setStep] = useState(0);
-
-  // Local state for form fields
+  // All onboarding state
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [industry, setIndustry] = useState("");
@@ -81,7 +178,6 @@ const Onboarding = () => {
   const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-fill if profile exists
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || "");
@@ -92,10 +188,26 @@ const Onboarding = () => {
     }
   }, [profile]);
 
+  const state = {
+    displayName, setDisplayName,
+    bio, setBio,
+    industry, setIndustry,
+    goals, setGoals,
+    interests, setInterests,
+    toggleSelection: (value: string, currentArray: string[], setter: (arr: string[]) => void) => {
+      if (currentArray.includes(value)) {
+        setter(currentArray.filter(item => item !== value));
+      } else {
+        setter([...currentArray, value]);
+      }
+    }
+  };
+
+  const currentStep = parseInt(stepIndex ?? "0", 10);
+
   const handleNext = () => {
     setError(null);
-    // Validate current step
-    switch (STEPS[step]) {
+    switch (STEPS[currentStep]) {
       case "displayName":
         if (!displayName.trim()) {
           setError("Display Name is required.");
@@ -123,21 +235,22 @@ const Onboarding = () => {
       default:
         break;
     }
-    if (step < STEPS.length - 1) {
-      setStep(step + 1);
+    if (currentStep < STEPS.length - 1) {
+      navigate(`/onboarding/step/${currentStep + 1}`);
     }
   };
 
   const handleBack = () => {
     setError(null);
-    if (step > 0) setStep(step - 1);
+    if (currentStep > 0) navigate(`/onboarding/step/${currentStep - 1}`);
+    else navigate("/onboarding");
   };
 
   const handleFinish = async () => {
     setError(null);
     if (!displayName.trim()) {
       setError("Display Name is required.");
-      setStep(0);
+      navigate("/onboarding/step/0");
       return;
     }
     await saveProfile({
@@ -151,14 +264,6 @@ const Onboarding = () => {
     navigate("/");
   };
 
-  const toggleSelection = (value: string, currentArray: string[], setter: (arr: string[]) => void) => {
-    if (currentArray.includes(value)) {
-      setter(currentArray.filter(item => item !== value));
-    } else {
-      setter([...currentArray, value]);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -167,71 +272,29 @@ const Onboarding = () => {
     );
   }
 
-  const showBack = step > 0;
-  const isLast = step === STEPS.length - 1;
-
+  if (!stepIndex) return <Navigate to="/onboarding" replace />;
+  
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-gray-900/20 px-4">
-      <Card className="w-full max-w-2xl shadow-xl bg-background/90 backdrop-blur border-white/10 transition-all duration-500">
-        <CardHeader>
-          <CardTitle>
-            <OnboardingProgressBar 
-              steps={STEPS}
-              currentStep={step}
-              stepDescriptions={STEP_DESCRIPTIONS}
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-6"
-            onSubmit={e => {
-              e.preventDefault();
-              if (isLast) {
-                handleFinish();
-              } else {
-                handleNext();
-              }
-            }}
-          >
-            <OnboardingStepContent
-              currentStep={STEPS[step]}
-              stepTitles={STEP_TITLES}
-              displayName={displayName}
-              setDisplayName={setDisplayName}
-              bio={bio}
-              setBio={setBio}
-              industry={industry}
-              setIndustry={setIndustry}
-              goals={goals}
-              setGoals={setGoals}
-              interests={interests}
-              setInterests={setInterests}
-              industryOptions={INDUSTRY_OPTIONS}
-              goalsOptions={GOALS_OPTIONS}
-              interestsOptions={INTERESTS_OPTIONS}
-              toggleSelection={toggleSelection}
-            />
-            
-            {/* Error message */}
-            {error && (
-              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                {error}
-              </div>
-            )}
-            
-            <OnboardingNavigation
-              showBack={showBack}
-              isLast={isLast}
-              onBack={handleBack}
-              onNext={handleNext}
-              onFinish={handleFinish}
-            />
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <StepScreen
+      stepIndex={currentStep}
+      totalSteps={STEPS.length}
+      state={state}
+      setState={state}
+      handleNext={handleNext}
+      handleBack={handleBack}
+      handleFinish={handleFinish}
+      error={error}
+      setError={setError}
+    />
   );
 };
+
+const Onboarding = () => (
+  <Routes>
+    <Route path="/" element={<Welcome />} />
+    <Route path="/step/:stepIndex" element={<OnboardingRouter />} />
+    <Route path="*" element={<Navigate to="/onboarding" />} />
+  </Routes>
+);
 
 export default Onboarding;

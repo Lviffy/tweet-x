@@ -21,7 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding/*" element={<Onboarding />} />
           <Route path="/tweet-generator" element={<TweetGenerator />} />
           <Route path="/tweet-generator/:sessionId" element={<TweetGenerator />} />
           <Route path="/starred-tweets" element={<StarredTweetsPage />} />
