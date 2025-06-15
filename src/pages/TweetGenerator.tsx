@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+
+import React from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import TweetForm from "@/components/TweetForm";
@@ -10,7 +11,6 @@ import { TweetGeneratorHeader } from "@/components/TweetGeneratorHeader";
 import { useTweetFormState } from "@/hooks/useTweetFormState";
 import { useTweetGeneratorNavigation } from "@/hooks/useTweetGeneratorNavigation";
 import { useTweetGeneratorSession } from "@/hooks/useTweetGeneratorSession";
-import { useUserProfile } from "@/hooks/useUserProfile";
 
 console.log("TweetGenerator page mounted");
 
@@ -47,15 +47,6 @@ const TweetGenerator = () => {
     setIncludeCTA
   } = useTweetFormState(sessionParams);
 
-  const { profile, loading: profileLoading } = useUserProfile();
-
-  // If missing onboarding, redirect
-  useEffect(() => {
-    if (!loading && user && !profileLoading && !profile) {
-      navigate("/onboarding");
-    }
-  }, [user, loading, profileLoading, profile, navigate]);
-
   const handleGenerate = async () => {
     // Validate required fields
     if (!topic.trim()) {
@@ -76,20 +67,8 @@ const TweetGenerator = () => {
       return;
     }
 
-    // Add onboarding context for prompt construction
-    const fullTopic = profile
-      ? `${topic.trim()}
-
-[Personalization Info]
-Display Name: ${profile.display_name || ""}.
-Bio: ${profile.bio || ""}
-Industry: ${profile.industry || ""}
-Goals: ${profile.goals || ""}
-Interests: ${profile.interests || ""}`
-      : topic.trim();
-
     console.log('Generating tweets with params:', {
-      topic: fullTopic,
+      topic: topic.trim(),
       tone,
       format,
       tweetCount,
@@ -100,8 +79,8 @@ Interests: ${profile.interests || ""}`
     });
 
     const newSessionId = await generateTweets({
-      handles: [],
-      topic: fullTopic,
+      handles: [], // No longer using handles
+      topic: topic.trim(),
       tone,
       format,
       tweetCount,
@@ -117,20 +96,20 @@ Interests: ${profile.interests || ""}`
   };
 
   const handleRegenerate = async () => {
-    const fullTopic = profile
-      ? `${topic.trim()}
-
-[Personalization Info]
-Display Name: ${profile.display_name || ""}.
-Bio: ${profile.bio || ""}
-Industry: ${profile.industry || ""}
-Goals: ${profile.goals || ""}
-Interests: ${profile.interests || ""}`
-      : topic.trim();
+    console.log('Regenerating tweets with params:', {
+      topic: topic.trim(),
+      tone,
+      format,
+      tweetCount,
+      length,
+      includeHashtags,
+      includeEmojis,
+      includeCTA
+    });
 
     await regenerateTweets({
-      handles: [],
-      topic: fullTopic,
+      handles: [], // No longer using handles
+      topic: topic.trim(),
       tone,
       format,
       tweetCount,
