@@ -1,3 +1,4 @@
+
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SparkleBackground from "@/components/SparkleBackground";
@@ -18,9 +19,16 @@ const Index = () => {
         console.error("Failed to initialize Unicorn Studio:", err);
       });
     }
+
+    // Redirect if already onboarded
+    if (!loading && user && !profileLoading && profile) {
+      navigate("/tweet-generator", { replace: true });
+      return;
+    }
+
     // Redirect to onboarding if user logged in but not onboarded
     if (!loading && user && !profileLoading && !profile) {
-      navigate("/onboarding");
+      navigate("/onboarding", { replace: true });
     }
   }, [user, loading, profile, profileLoading, navigate]);
 
