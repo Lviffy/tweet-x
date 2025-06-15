@@ -5,10 +5,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
   "displayName",
@@ -57,15 +58,15 @@ const STEP_TITLES: Record<string, string> = {
   bio: "Tell us about yourself",
   industry: "Which industry are you in?",
   goals: "What are your primary goals on Twitter?",
-  interests: "Select your main interest",
+  interests: "What are your main interests?",
 };
 
 const STEP_DESCRIPTIONS: Record<string, string> = {
   displayName: "This is how others will see you.",
   bio: "A short bio helps us personalize your tweets.",
   industry: "Choose the industry that best fits you.",
-  goals: "Pick one that matches what you want most.",
-  interests: "We’ll use this to craft relevant tweets.",
+  goals: "Pick what matters most to you (you can select multiple).",
+  interests: "We'll use these to craft relevant tweets (select multiple).",
 };
 
 const Onboarding = () => {
@@ -79,8 +80,8 @@ const Onboarding = () => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [industry, setIndustry] = useState("");
-  const [goals, setGoals] = useState("");
-  const [interests, setInterests] = useState("");
+  const [goals, setGoals] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Pre-fill if profile exists
@@ -89,8 +90,8 @@ const Onboarding = () => {
       setDisplayName(profile.display_name || "");
       setBio(profile.bio || "");
       setIndustry(profile.industry || "");
-      setGoals(profile.goals || "");
-      setInterests(profile.interests || "");
+      setGoals(profile.goals ? profile.goals.split(",") : []);
+      setInterests(profile.interests ? profile.interests.split(",") : []);
     }
   }, [profile]);
 
@@ -111,14 +112,14 @@ const Onboarding = () => {
         }
         break;
       case "goals":
-        if (!goals) {
-          setError("Please select a goal.");
+        if (goals.length === 0) {
+          setError("Please select at least one goal.");
           return;
         }
         break;
       case "interests":
-        if (!interests) {
-          setError("Please select an interest.");
+        if (interests.length === 0) {
+          setError("Please select at least one interest.");
           return;
         }
         break;
@@ -146,12 +147,34 @@ const Onboarding = () => {
       display_name: displayName,
       bio,
       industry,
-      goals,
-      interests,
+      goals: goals.join(","),
+      interests: interests.join(","),
     });
     toast({ title: "Profile saved!", description: "Your onboarding details were saved." });
     navigate("/");
   };
+
+  const toggleSelection = (value: string, currentArray: string[], setter: (arr: string[]) => void) => {
+    if (currentArray.includes(value)) {
+      setter(currentArray.filter(item => item !== value));
+    } else {
+      setter([...currentArray, value]);
+    }
+  };
+
+  const OptionBox = ({ option, isSelected, onClick }: { option: string; isSelected: boolean; onClick: () => void }) => (
+    <div
+      onClick={onClick}
+      className={cn(
+        "p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 text-center",
+        isSelected
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+      )}
+    >
+      <span className="text-sm font-medium">{option}</span>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -163,24 +186,40 @@ const Onboarding = () => {
 
   const showBack = step > 0;
   const isLast = step === STEPS.length - 1;
+  const progressPercentage = ((step + 1) / STEPS.length) * 100;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-gray-900/20 px-4">
-      <Card className="w-full max-w-md shadow-xl bg-background/90 backdrop-blur border-white/10 transition-all duration-500 relative">
+      <Card className="w-full max-w-2xl shadow-xl bg-background/90 backdrop-blur border-white/10 transition-all duration-500">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2">
-            🙌 Onboarding
+            Onboarding
             <span className="ml-auto text-xs text-muted-foreground">
               Step {step + 1} of {STEPS.length}
             </span>
           </CardTitle>
-          <div className="mt-1 text-muted-foreground text-sm">
+          
+          {/* Progress bar with gaps */}
+          <div className="flex items-center gap-2 mt-4">
+            {STEPS.map((_, index) => (
+              <div key={index} className="flex-1">
+                <div
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    index <= step ? "bg-primary" : "bg-muted"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-2 text-muted-foreground text-sm">
             {STEP_DESCRIPTIONS[STEPS[step]]}
           </div>
         </CardHeader>
         <CardContent>
           <form
-            className="space-y-5"
+            className="space-y-6"
             onSubmit={e => {
               e.preventDefault();
               if (isLast) {
@@ -193,7 +232,7 @@ const Onboarding = () => {
             {/* Render step specific content */}
             {STEPS[step] === "displayName" && (
               <div>
-                <label htmlFor="displayName" className="block ml-1 mb-1 font-medium">
+                <label htmlFor="displayName" className="block ml-1 mb-3 font-medium text-lg">
                   {STEP_TITLES.displayName} <span className="text-destructive">*</span>
                 </label>
                 <Input
@@ -203,75 +242,87 @@ const Onboarding = () => {
                   autoFocus
                   required
                   placeholder="e.g. Jane Doe"
+                  className="text-lg p-4"
                 />
               </div>
             )}
+            
             {STEPS[step] === "bio" && (
               <div>
-                <label htmlFor="bio" className="block ml-1 mb-1 font-medium">{STEP_TITLES.bio}</label>
+                <label htmlFor="bio" className="block ml-1 mb-3 font-medium text-lg">{STEP_TITLES.bio}</label>
                 <Textarea
                   id="bio"
                   value={bio}
                   onChange={e => setBio(e.target.value)}
-                  rows={2}
+                  rows={3}
                   placeholder="e.g. Product Builder, AI Enthusiast"
+                  className="text-lg p-4"
                 />
               </div>
             )}
+            
             {STEPS[step] === "industry" && (
               <div>
-                <label className="block ml-1 mb-1 font-medium">{STEP_TITLES.industry}</label>
+                <label className="block ml-1 mb-3 font-medium text-lg">{STEP_TITLES.industry}</label>
                 <Select value={industry} onValueChange={v => setIndustry(v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-lg p-4 h-auto">
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
                     {INDUSTRY_OPTIONS.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option} value={option} className="text-lg p-3">{option}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
+            
             {STEPS[step] === "goals" && (
               <div>
-                <label className="block ml-1 mb-1 font-medium">{STEP_TITLES.goals}</label>
-                <RadioGroup value={goals} onValueChange={setGoals} className="gap-2">
+                <label className="block ml-1 mb-3 font-medium text-lg">{STEP_TITLES.goals}</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {GOALS_OPTIONS.map(option => (
-                    <div key={option} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option} id={option} />
-                      <label htmlFor={option} className="text-sm">{option}</label>
-                    </div>
+                    <OptionBox
+                      key={option}
+                      option={option}
+                      isSelected={goals.includes(option)}
+                      onClick={() => toggleSelection(option, goals, setGoals)}
+                    />
                   ))}
-                </RadioGroup>
+                </div>
               </div>
             )}
+            
             {STEPS[step] === "interests" && (
               <div>
-                <label className="block ml-1 mb-1 font-medium">{STEP_TITLES.interests}</label>
-                <Select value={interests} onValueChange={v => setInterests(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your main interest" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INTERESTS_OPTIONS.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="block ml-1 mb-3 font-medium text-lg">{STEP_TITLES.interests}</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {INTERESTS_OPTIONS.map(option => (
+                    <OptionBox
+                      key={option}
+                      option={option}
+                      isSelected={interests.includes(option)}
+                      onClick={() => toggleSelection(option, interests, setInterests)}
+                    />
+                  ))}
+                </div>
               </div>
             )}
+            
             {/* Error message */}
             {error && (
-              <div className="text-destructive text-sm">{error}</div>
+              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                {error}
+              </div>
             )}
-            <div className="flex justify-between mt-8 gap-2">
+            
+            <div className="flex justify-between mt-8 gap-4">
               {showBack ? (
-                <Button type="button" variant="secondary" onClick={handleBack}>
+                <Button type="button" variant="secondary" onClick={handleBack} className="px-8">
                   Back
                 </Button>
               ) : <span />}
-              <Button type="submit" className="ml-auto">
+              <Button type="submit" className="ml-auto px-8">
                 {isLast ? "Finish" : "Next"}
               </Button>
             </div>
