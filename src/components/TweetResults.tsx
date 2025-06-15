@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,19 +48,11 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
-      <div className="relative flex-1">
-        <div
-          className="
-            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
-            max-h-[80vh]
-            overflow-y-auto
-            rounded-lg
-            bg-transparent
-          "
-        >
+      {/* Parent scrollable container: fills all available space */}
+      <div className="relative flex-1 flex flex-col min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto rounded-lg bg-transparent">
           {tweets.length === 0 ? (
             <Card className="bg-background/80 backdrop-blur-sm border-white/10">
               <CardContent className="py-12 text-center">
@@ -89,7 +80,6 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
                     </div>
                   </div>
                 )}
-
                 {/* Thread Tweets Section */}
                 {threadVariations.length > 0 && (
                   <div className="space-y-4">
@@ -110,4 +100,3 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
 };
 
 export default TweetResults;
-

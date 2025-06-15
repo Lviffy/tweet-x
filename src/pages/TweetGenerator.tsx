@@ -162,7 +162,7 @@ const TweetGenerator = () => {
 
               <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0">
                 {/* Input Form */}
-                <div className="flex flex-col">
+                <div className="flex flex-col flex-1 min-h-0">
                   <TweetForm
                     topic={topic}
                     tone={tone}
@@ -188,7 +188,7 @@ const TweetGenerator = () => {
                 </div>
 
                 {/* Results */}
-                <div className="flex flex-col min-h-0">
+                <div className="flex flex-col flex-1 min-h-0">
                   <TweetResults
                     tweets={generatedTweets}
                     onCopyToClipboard={copyToClipboard}
