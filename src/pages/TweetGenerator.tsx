@@ -45,7 +45,7 @@ const TweetGenerator = () => {
   const [includeHashtags, setIncludeHashtags] = useState(false);
   const [includeEmojis, setIncludeEmojis] = useState(false);
   const [includeCTA, setIncludeCTA] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const { toast } = useToast();
 
   const { 
@@ -59,34 +59,23 @@ const TweetGenerator = () => {
     setGeneratedTweets 
   } = useTweetGeneration();
 
-  // Initialize form only once when component mounts
+  // Load session only once when component mounts with sessionId
   useEffect(() => {
-    if (!hasInitialized && !sessionId) {
-      console.log('Initializing form for new session');
-      setHandles([]);
-      setTopic('');
-      setTone('');
-      setFormat('single');
-      setTweetCount(3);
-      setIncludeHashtags(false);
-      setIncludeEmojis(false);
-      setIncludeCTA(false);
-      clearSession();
-      setHasInitialized(true);
-    }
-  }, [sessionId, hasInitialized, clearSession]);
-
-  // Load session if sessionId is provided
-  useEffect(() => {
-    if (sessionId && !isLoadingSession && hasInitialized) {
+    if (sessionId && !sessionLoaded && !isLoadingSession) {
       console.log('Loading session:', sessionId);
-      loadSession(sessionId);
+      loadSession(sessionId).then(() => {
+        setSessionLoaded(true);
+      });
+    } else if (!sessionId && !sessionLoaded) {
+      // Clear session for new sessions
+      clearSession();
+      setSessionLoaded(true);
     }
-  }, [sessionId, loadSession, isLoadingSession, hasInitialized]);
+  }, [sessionId, sessionLoaded, isLoadingSession, loadSession, clearSession]);
 
   // Update form fields when session parameters are loaded
   useEffect(() => {
-    if (sessionParams && hasInitialized) {
+    if (sessionParams) {
       console.log('Updating form with session params:', sessionParams);
       setHandles(sessionParams.handles || []);
       setTopic(sessionParams.topic || '');
@@ -97,7 +86,7 @@ const TweetGenerator = () => {
       setIncludeEmojis(sessionParams.includeEmojis || false);
       setIncludeCTA(sessionParams.includeCTA || false);
     }
-  }, [sessionParams, hasInitialized]);
+  }, [sessionParams]);
 
   // Redirect to auth if not authenticated
   useEffect(() => {
