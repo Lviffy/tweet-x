@@ -10,6 +10,17 @@ COPY package*.json ./
 
 # Install ALL dependencies as root (we need dev dependencies for TypeScript build)
 USER root
+
+# Install Chrome dependencies and update Chrome installation
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    libxss1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies and clean cache
 RUN npm install && npm cache clean --force
 
 # Copy the rest of the application code
@@ -17,6 +28,9 @@ COPY . .
 
 # Build the TypeScript code
 RUN npm run build
+
+# Install Chrome browsers using Puppeteer
+RUN npx puppeteer browsers install chrome
 
 # Now remove dev dependencies to keep image size down
 RUN npm prune --production
