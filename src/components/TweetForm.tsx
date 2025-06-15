@@ -18,6 +18,7 @@ interface TweetFormProps {
   includeEmojis: boolean;
   includeCTA: boolean;
   isGenerating: boolean;
+  hasGeneratedTweets?: boolean;
   onTopicChange: (topic: string) => void;
   onToneChange: (tone: string) => void;
   onFormatChange: (format: string) => void;
@@ -27,6 +28,7 @@ interface TweetFormProps {
   onIncludeEmojisChange: (include: boolean) => void;
   onIncludeCTAChange: (include: boolean) => void;
   onGenerate: () => void;
+  onRegenerate?: () => void;
 }
 
 const TweetForm = ({
@@ -39,6 +41,7 @@ const TweetForm = ({
   includeEmojis,
   includeCTA,
   isGenerating,
+  hasGeneratedTweets = false,
   onTopicChange,
   onToneChange,
   onFormatChange,
@@ -47,7 +50,8 @@ const TweetForm = ({
   onIncludeHashtagsChange,
   onIncludeEmojisChange,
   onIncludeCTAChange,
-  onGenerate
+  onGenerate,
+  onRegenerate
 }: TweetFormProps) => {
   const toneOptions = [
     { value: 'build-in-public', label: 'Build-in-Public' },
@@ -209,24 +213,38 @@ const TweetForm = ({
           </div>
         </div>
 
-        <Button
-          onClick={onGenerate}
-          disabled={isGenerating}
-          className="w-full"
-          size="lg"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-4 h-4 mr-2" />
-              Generate {tweetCount} Tweets
-            </>
+        <div className="space-y-3">
+          <Button
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className="w-full"
+            size="lg"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Generate {tweetCount} Tweets
+              </>
+            )}
+          </Button>
+
+          {hasGeneratedTweets && onRegenerate && (
+            <Button
+              variant="outline"
+              onClick={onRegenerate}
+              disabled={isGenerating}
+              className="w-full"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Regenerate
+            </Button>
           )}
-        </Button>
+        </div>
       </CardContent>
     </Card>
   );

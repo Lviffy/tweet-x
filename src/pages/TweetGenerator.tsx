@@ -1,4 +1,3 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -147,6 +146,7 @@ const TweetGenerator = () => {
                     includeEmojis={includeEmojis}
                     includeCTA={includeCTA}
                     isGenerating={isGenerating}
+                    hasGeneratedTweets={generatedTweets.length > 0}
                     onTopicChange={setTopic}
                     onToneChange={setTone}
                     onFormatChange={setFormat}
@@ -156,6 +156,7 @@ const TweetGenerator = () => {
                     onIncludeEmojisChange={setIncludeEmojis}
                     onIncludeCTAChange={setIncludeCTA}
                     onGenerate={handleGenerate}
+                    onRegenerate={handleGenerate}
                   />
                 </div>
 
@@ -163,8 +164,6 @@ const TweetGenerator = () => {
                 <div className="flex flex-col min-h-0">
                   <TweetResults
                     tweets={generatedTweets}
-                    isGenerating={isGenerating}
-                    onRegenerate={handleGenerate}
                     onCopyToClipboard={copyToClipboard}
                   />
                 </div>
