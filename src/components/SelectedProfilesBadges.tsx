@@ -1,7 +1,7 @@
 
 import React from "react";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 interface SelectedProfilesBadgesProps {
   selectedProfiles: string[];
@@ -9,28 +9,26 @@ interface SelectedProfilesBadgesProps {
   onRemoveProfile: (handle: string) => void;
 }
 
-const SelectedProfilesBadges = ({ 
-  selectedProfiles, 
-  maxProfiles, 
-  onRemoveProfile 
-}: SelectedProfilesBadgesProps) => {
+const SelectedProfilesBadges = ({ selectedProfiles, maxProfiles, onRemoveProfile }: SelectedProfilesBadgesProps) => {
   if (selectedProfiles.length === 0) return null;
 
   return (
-    <div className="pt-2">
-      <Label className="text-sm font-medium">
-        Selected Profiles ({selectedProfiles.length}/{maxProfiles}):
-      </Label>
-      <div className="flex flex-wrap gap-2 mt-2">
-        {selectedProfiles.map((handle) => (
-          <Badge key={handle} variant="default" className="px-3 py-1">
+    <div className="space-y-2">
+      <p className="text-sm font-medium">
+        Selected Profiles ({selectedProfiles.length}/{maxProfiles})
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {selectedProfiles.map((handle, index) => (
+          <Badge 
+            key={`${handle}-${index}`} // Use handle + index to ensure uniqueness
+            variant="secondary" 
+            className="flex items-center gap-1 px-2 py-1"
+          >
             @{handle}
-            <button
+            <X 
+              className="h-3 w-3 cursor-pointer hover:text-red-500" 
               onClick={() => onRemoveProfile(handle)}
-              className="ml-2 text-xs hover:text-red-200"
-            >
-              ×
-            </button>
+            />
           </Badge>
         ))}
       </div>

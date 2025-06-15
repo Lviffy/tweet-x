@@ -93,10 +93,20 @@ export async function scrapeTwitterProfile(handle: string): Promise<ScrapeResult
 
     console.log('Nitter page loaded, extracting content...');
 
-    // Wait for content to load
+    // Wait for content to load and check page structure
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Extract tweets
+    // Debug: Log page content to understand structure
+    const pageContent = await page.evaluate(() => {
+      return {
+        title: document.title,
+        bodyText: document.body.innerText.substring(0, 500),
+        classes: Array.from(document.querySelectorAll('*')).map(el => el.className).filter(c => c && c.includes('tweet')).slice(0, 10)
+      };
+    });
+    console.log('Page structure:', pageContent);
+
+    // Extract tweets with updated selectors
     const tweets = await extractTweets(page);
 
     // Get profile info
@@ -133,12 +143,17 @@ export async function scrapeTwitterProfile(handle: string): Promise<ScrapeResult
 }
 
 async function extractTweets(page: any): Promise<ScrapedTweet[]> {
-  // Nitter-specific selectors for tweets
+  // Updated Nitter selectors based on current structure
   const tweetSelectors = [
-    '.tweet-content',
-    '.tweet-body',
-    '.timeline-item .tweet-content',
-    '.tweet .tweet-content'
+    '.timeline-item',
+    '.timeline .tweet',
+    '.main-tweet',
+    '.timeline-tweet',
+    '.tweet-link',
+    'article',
+    '[data-tweet-id]',
+    '.status-content',
+    '.tweet-text'
   ];
 
   let tweets: string[] = [];
@@ -152,15 +167,45 @@ async function extractTweets(page: any): Promise<ScrapedTweet[]> {
       console.log(`Found ${elements.length} elements with selector: ${selector}`);
       
       if (elements.length > 0) {
-        const tweetTexts = await page.$$eval(selector, (els: any[]) => 
-          els.map(el => el.textContent?.trim())
-            .filter(text => text && text.length > 10)
-            .slice(0, 15) // Limit to 15 tweets max
-        );
+        // Try to extract text content from these elements
+        const tweetTexts = await page.evaluate((sel: string) => {
+          const elements = document.querySelectorAll(sel);
+          const texts: string[] = [];
+          
+          elements.forEach((el, index) => {
+            if (index < 15) { // Limit to 15 tweets max
+              // Try multiple ways to extract tweet text
+              let text = '';
+              
+              // Method 1: Look for specific text containers
+              const textContainer = el.querySelector('.tweet-content, .tweet-text, .tweet-body, .status-content');
+              if (textContainer) {
+                text = textContainer.textContent?.trim() || '';
+              }
+              
+              // Method 2: If no specific container, get direct text but filter out UI elements
+              if (!text) {
+                const fullText = el.textContent?.trim() || '';
+                // Filter out common UI elements
+                const filteredText = fullText.replace(/\b(Reply|Retweet|Like|Show this thread|·|\d+[smhd]|\d+,?\d*)\b/g, '').trim();
+                if (filteredText.length > 20 && !filteredText.includes('@') && !filteredText.includes('Show thread')) {
+                  text = filteredText;
+                }
+              }
+              
+              if (text && text.length > 10 && text.length < 1000) {
+                texts.push(text);
+              }
+            }
+          });
+          
+          return texts;
+        }, selector);
         
         if (tweetTexts.length > 0) {
-          tweets = tweetTexts as string[];
+          tweets = tweetTexts;
           console.log(`Successfully extracted ${tweets.length} tweets using selector: ${selector}`);
+          console.log('Sample tweets:', tweets.slice(0, 2));
           break;
         }
       }
@@ -168,6 +213,29 @@ async function extractTweets(page: any): Promise<ScrapedTweet[]> {
       console.log(`Nitter selector ${selector} failed:`, error);
       continue;
     }
+  }
+
+  // If no tweets found with selectors, try a more general approach
+  if (tweets.length === 0) {
+    console.log('No tweets found with standard selectors, trying general text extraction...');
+    
+    const generalTweets = await page.evaluate(() => {
+      const allText = document.body.innerText;
+      const lines = allText.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 20 && 
+               trimmed.length < 300 && 
+               !trimmed.includes('Reply') &&
+               !trimmed.includes('Retweet') &&
+               !trimmed.includes('Show this thread') &&
+               !trimmed.match(/^\d+[smhd]$/) &&
+               !trimmed.includes('nitter.it');
+      });
+      return lines.slice(0, 5); // Limit to 5 potential tweets
+    });
+    
+    tweets = generalTweets;
+    console.log('General extraction found:', tweets.length, 'potential tweets');
   }
 
   return tweets.map((text, i) => ({
@@ -190,18 +258,20 @@ async function extractProfileInfo(page: any, handle: string): Promise<ScrapedPro
   let bio = '';
   let verified = false;
 
-  // Try to get display name from Nitter
+  // Updated selectors for current Nitter structure
   const nameSelectors = [
     '.profile-card-fullname',
     '.profile-name',
-    'h1.profile-fullname',
-    '.profile-card .profile-name'
+    '.profile-displayname',
+    'h1',
+    '.username',
+    '.profile-card .fullname'
   ];
 
   for (const selector of nameSelectors) {
     try {
       const name = await page.$eval(selector, (el: any) => el.textContent?.trim());
-      if (name && name.length > 0) {
+      if (name && name.length > 0 && !name.includes('@') && name !== handle) {
         displayName = name;
         console.log(`Found display name: ${displayName} using selector: ${selector}`);
         break;
@@ -211,11 +281,12 @@ async function extractProfileInfo(page: any, handle: string): Promise<ScrapedPro
     }
   }
 
-  // Try to get bio from Nitter
+  // Updated bio selectors
   const bioSelectors = [
     '.profile-bio',
     '.profile-description',
-    '.profile-card .profile-bio'
+    '.bio',
+    '.profile-card .description'
   ];
 
   for (const selector of bioSelectors) {
@@ -231,9 +302,9 @@ async function extractProfileInfo(page: any, handle: string): Promise<ScrapedPro
     }
   }
 
-  // Check for verification badge in Nitter
+  // Check for verification badge
   try {
-    const verificationBadge = await page.$('.icon-ok');
+    const verificationBadge = await page.$('.icon-ok, .verified, .badge');
     verified = !!verificationBadge;
     console.log(`Verification status: ${verified}`);
   } catch (error) {
