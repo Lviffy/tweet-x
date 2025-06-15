@@ -30,14 +30,27 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
     }
   };
 
+  // Show a disabled button if not supported, so users know the feature exists
   if (!isSupported) {
-    return null; // Don't show the button if speech recognition is not supported
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className={className}
+        title="Speech recognition not supported in this browser"
+      >
+        <Mic className="w-4 h-4 mr-2" />
+        Speak
+      </Button>
+    );
   }
 
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={isListening ? "destructive" : "outline"}
       size="sm"
       onClick={handleToggleListening}
       className={className}

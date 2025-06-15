@@ -95,20 +95,18 @@ const TweetForm = ({
         {/* Topic */}
         <div className="space-y-2">
           <Label htmlFor="topic">Topic/Prompt *</Label>
-          <div className="relative">
-            <Textarea
-              id="topic"
-              placeholder="What should the tweet be about? (e.g., 'Announcing an MVP', 'Lessons from fundraising')"
-              value={topic}
-              onChange={(e) => onTopicChange(e.target.value)}
-              rows={3}
+          <Textarea
+            id="topic"
+            placeholder="What should the tweet be about? (e.g., 'Announcing an MVP', 'Lessons from fundraising')"
+            value={topic}
+            onChange={(e) => onTopicChange(e.target.value)}
+            rows={3}
+          />
+          <div className="flex justify-end">
+            <SpeechToTextButton
+              onTranscriptChange={handleSpeechTranscript}
+              className="h-8 px-3"
             />
-            <div className="absolute top-2 right-2">
-              <SpeechToTextButton
-                onTranscriptChange={handleSpeechTranscript}
-                className="h-8 px-2"
-              />
-            </div>
           </div>
         </div>
 
