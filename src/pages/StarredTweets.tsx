@@ -38,7 +38,12 @@ const StarredTweetsPage = () => {
         setLoading(false);
         return;
       }
-      setTweets(data ?? []);
+      // Map and coerce type to match "single" | "thread"
+      const safeTweets: GeneratedTweet[] = (data ?? []).map((t: any) => ({
+        ...t,
+        type: t.type === "thread" ? "thread" : "single",
+      }));
+      setTweets(safeTweets);
       setLoading(false);
     };
     fetchStarredTweets();
