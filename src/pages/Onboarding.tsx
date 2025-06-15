@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -261,7 +260,7 @@ const OnboardingRouter = () => {
       interests: interests.join(","),
     });
     toast({ title: "Profile saved!", description: "Your onboarding details were saved." });
-    navigate("/");
+    navigate("/tweet-generator"); // Redirect to tweet generator after onboarding
   };
 
   if (loading) {
