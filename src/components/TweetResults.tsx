@@ -50,20 +50,20 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   return (
     <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
-      <div className="relative flex-1">
+      {/* Parent scrollable container */}
+      <div className="relative flex-1 flex flex-col min-h-0">
         <div
           className="
-            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
-            max-h-[80vh]
-            overflow-y-auto
+            flex flex-col h-full min-h-0
+            max-h-full
+            overflow-y-visible
             rounded-lg
             bg-transparent
           "
         >
           {tweets.length === 0 ? (
-            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-              <CardContent className="py-12 text-center">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/10 h-full flex items-center">
+              <CardContent className="py-12 text-center w-full">
                 <p className="text-muted-foreground">
                   Your generated tweets will appear here
                 </p>
