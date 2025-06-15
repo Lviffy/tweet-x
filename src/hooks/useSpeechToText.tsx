@@ -13,8 +13,8 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const retryCountRef = useRef(0);
-  const maxRetries = 2;
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
   const {
@@ -26,18 +26,100 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
   // Check browser support on mount
   useEffect(() => {
     const checkSupport = () => {
-      const hasSupport = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-      console.log('Speech recognition support:', hasSupport);
+      const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+      const hasMediaRecorder = 'MediaRecorder' in window;
+      const hasSupport = hasSpeechRecognition || hasMediaRecorder;
+      console.log('Speech recognition support:', hasSpeechRecognition);
+      console.log('MediaRecorder support:', hasMediaRecorder);
       setIsSupported(hasSupport);
     };
 
     checkSupport();
   }, []);
 
-  // Initialize speech recognition
+  // Fallback to MediaRecorder if Speech Recognition fails
+  const startMediaRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      streamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const audioChunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        
+        // Convert to base64 for API call
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1];
+          
+          try {
+            // Call edge function for transcription
+            const response = await fetch('/api/transcribe-audio', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ audio: base64Audio }),
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              setTranscript(result.text || '');
+            } else {
+              throw new Error('Transcription failed');
+            }
+          } catch (error) {
+            console.error('Transcription error:', error);
+            toast({
+              title: "Transcription Failed",
+              description: "Could not transcribe audio. Please try again.",
+              variant: "destructive"
+            });
+          }
+        };
+        
+        reader.readAsDataURL(audioBlob);
+      };
+      
+      mediaRecorder.start();
+      setIsListening(true);
+      
+      // Auto-stop after 10 seconds or when manually stopped
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, 10000);
+      
+    } catch (error) {
+      console.error('MediaRecorder error:', error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access microphone. Please check permissions.",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+
+  // Initialize speech recognition with better error handling
   const initializeSpeechRecognition = useCallback(() => {
-    if (!isSupported) {
-      console.log('Speech recognition not supported');
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       return null;
     }
 
@@ -50,13 +132,12 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log('Speech recognition started');
+      console.log('Speech recognition started successfully');
       setIsListening(true);
-      retryCountRef.current = 0; // Reset retry count on successful start
     };
 
     recognition.onresult = (event) => {
-      console.log('Speech recognition result:', event);
+      console.log('Speech recognition result received');
       let finalTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -69,7 +150,6 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       if (finalTranscript) {
         console.log('Final transcript:', finalTranscript);
         setTranscript(finalTranscript);
-        retryCountRef.current = 0; // Reset retry count on successful result
       }
     };
 
@@ -77,71 +157,25 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
       
-      // Handle different error types with retry logic
+      // Fall back to MediaRecorder on any error
+      if (event.error === 'network' || event.error === 'service-not-allowed' || event.error === 'not-allowed') {
+        console.log('Falling back to MediaRecorder due to error:', event.error);
+        startMediaRecording();
+        return;
+      }
+      
+      // Handle other errors
       switch (event.error) {
-        case 'network':
-          if (retryCountRef.current < maxRetries) {
-            retryCountRef.current++;
-            console.log(`Network error, retrying... (${retryCountRef.current}/${maxRetries})`);
-            
-            // Retry after a short delay
-            setTimeout(() => {
-              if (recognitionRef.current) {
-                try {
-                  recognitionRef.current.start();
-                } catch (error) {
-                  console.error('Error during retry:', error);
-                }
-              }
-            }, 1000);
-          } else {
-            toast({
-              title: "Network Connection Issue",
-              description: "Unable to connect to speech recognition service. Please check your internet connection and try again.",
-              variant: "destructive"
-            });
-            retryCountRef.current = 0;
-          }
-          break;
-        case 'not-allowed':
-          toast({
-            title: "Microphone Access Denied",
-            description: "Please allow microphone access in your browser settings and try again.",
-            variant: "destructive"
-          });
-          break;
         case 'no-speech':
-          // Don't show error for no speech - just stop listening
           console.log('No speech detected');
-          break;
-        case 'service-not-allowed':
-          toast({
-            title: "Service Unavailable",
-            description: "Speech recognition service is temporarily unavailable. Please try again later.",
-            variant: "destructive"
-          });
-          break;
-        case 'bad-grammar':
-        case 'language-not-supported':
-          toast({
-            title: "Language Not Supported",
-            description: "The selected language is not supported for speech recognition.",
-            variant: "destructive"
-          });
-          break;
-        case 'audio-capture':
-          toast({
-            title: "Microphone Error",
-            description: "Unable to access your microphone. Please check your device settings.",
-            variant: "destructive"
-          });
           break;
         default:
           toast({
             title: "Speech Recognition Error",
-            description: `An error occurred: ${event.error}. Please try again.`,
-            variant: "destructive"
+            description: "Switching to alternative recording method...",
+            variant: "default"
           });
+          startMediaRecording();
       }
     };
 
@@ -151,10 +185,10 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
     };
 
     return recognition;
-  }, [continuous, interimResults, language, toast, isSupported]);
+  }, [continuous, interimResults, language, toast, startMediaRecording]);
 
   const startListening = useCallback(() => {
-    console.log('Attempting to start listening...');
+    console.log('Starting speech recognition...');
     
     if (!isSupported) {
       toast({
@@ -170,57 +204,53 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       return;
     }
 
-    // Check if we're on HTTPS or localhost (required for speech recognition)
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-      toast({
-        title: "HTTPS Required",
-        description: "Speech recognition requires a secure connection (HTTPS).",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      // Stop any existing recognition first
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (error) {
-          console.log('Error stopping previous recognition:', error);
+      // Try Speech Recognition first
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        recognitionRef.current = initializeSpeechRecognition();
+        
+        if (recognitionRef.current) {
+          setTranscript('');
+          recognitionRef.current.start();
+          return;
         }
       }
-
-      // Create fresh instance
-      recognitionRef.current = initializeSpeechRecognition();
-
-      if (recognitionRef.current) {
-        setTranscript('');
-        retryCountRef.current = 0;
-        recognitionRef.current.start();
-        console.log('Speech recognition start requested');
-      }
+      
+      // Fall back to MediaRecorder
+      startMediaRecording();
+      
     } catch (error) {
       console.error('Error starting speech recognition:', error);
-      setIsListening(false);
-      toast({
-        title: "Unable to Start",
-        description: "Failed to start speech recognition. Please try again.",
-        variant: "destructive"
-      });
+      // Final fallback to MediaRecorder
+      startMediaRecording();
     }
-  }, [initializeSpeechRecognition, isListening, isSupported, toast]);
+  }, [initializeSpeechRecognition, isListening, isSupported, toast, startMediaRecording]);
 
   const stopListening = useCallback(() => {
     console.log('Stopping speech recognition...');
-    retryCountRef.current = maxRetries; // Prevent retries when manually stopping
+    
     if (recognitionRef.current && isListening) {
       try {
         recognitionRef.current.stop();
       } catch (error) {
         console.error('Error stopping speech recognition:', error);
-        setIsListening(false);
       }
     }
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping media recorder:', error);
+      }
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setIsListening(false);
   }, [isListening]);
 
   const resetTranscript = useCallback(() => {
@@ -236,6 +266,18 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
         } catch (error) {
           console.error('Error cleaning up speech recognition:', error);
         }
+      }
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (error) {
+          console.error('Error cleaning up media recorder:', error);
+        }
+      }
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
