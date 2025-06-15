@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { TweetGeneratorSidebar } from "@/components/TweetGeneratorSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTweetGeneration } from "@/hooks/useTweetGeneration";
 import { useAuth } from "@/hooks/useAuth";
+import { Home } from "lucide-react";
 
 console.log("TweetGenerator page mounted");
 
@@ -182,12 +182,12 @@ const TweetGenerator = () => {
               transition={{ duration: 0.8 }}
               className="max-w-6xl mx-auto"
             >
-              {/* Header with Sidebar Toggle and Heading */}
+              {/* Header with Sidebar Toggle and Home Icon */}
               <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
                 <div className="flex items-center gap-4">
                   <SidebarTrigger />
-                  <Button variant="outline" onClick={() => navigate("/")}>
-                    Go Home
+                  <Button variant="outline" size="icon" onClick={() => navigate("/")}>
+                    <Home className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="flex-1 flex justify-center">
