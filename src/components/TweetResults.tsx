@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,11 +48,13 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 flex-1 min-h-0 h-full flex flex-col">
+    <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
       {/* Parent scrollable container */}
-      <div className="relative flex-1 min-h-0 h-full">
-        <div className="flex-1 min-h-0 h-full pr-4">
+      <div className="relative flex-1 min-h-0">
+        <div
+          className="flex-1 min-h-0 h-full pr-4"
+        >
           {tweets.length === 0 ? (
             <Card className="bg-background/80 backdrop-blur-sm border-white/10">
               <CardContent className="py-12 text-center">
@@ -102,4 +103,3 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
 };
 
 export default TweetResults;
-
