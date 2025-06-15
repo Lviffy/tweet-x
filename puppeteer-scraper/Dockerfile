@@ -18,6 +18,15 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     procps \
     libxss1 \
+    libgconf-2-4 \
+    libxtst6 \
+    libxrandr2 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libatk1.0-0 \
+    libcairo-gobject2 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies and clean cache
@@ -29,8 +38,11 @@ COPY . .
 # Build the TypeScript code
 RUN npm run build
 
-# Install Chrome browsers using Puppeteer
-RUN npx puppeteer browsers install chrome
+# Install Chrome browsers using Puppeteer with explicit version
+RUN npx puppeteer browsers install chrome@stable
+
+# Verify Chrome installation
+RUN ls -la /home/pptruser/.cache/puppeteer/
 
 # Now remove dev dependencies to keep image size down
 RUN npm prune --production
