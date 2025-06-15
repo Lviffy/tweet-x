@@ -21,9 +21,8 @@ RUN npm run build
 # Now remove dev dependencies to keep image size down
 RUN npm prune --production
 
-# Create a non-root user and switch to it
-RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
-    && mkdir -p /home/pptruser/Downloads \
+# The pptruser already exists in the base image, so we just need to set permissions
+RUN mkdir -p /home/pptruser/Downloads \
     && chown -R pptruser:pptruser /home/pptruser \
     && chown -R pptruser:pptruser /app
 
