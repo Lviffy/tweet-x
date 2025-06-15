@@ -186,7 +186,7 @@ const TweetGenerator = () => {
               <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
                 <div className="flex items-center gap-4">
                   <SidebarTrigger />
-                  <Button variant="outline" size="icon" onClick={() => navigate("/")}>
+                  <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-7 w-7">
                     <Home className="h-4 w-4" />
                   </Button>
                 </div>
