@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Fragment } from "react";
 import { useNavigate, useParams, Navigate, Routes, Route } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -273,8 +272,7 @@ const OnboardingSteps = () => {
     interests, setInterests,
   };
 
-  const step = STEPS[stepIdx];
-  // Error validation
+  // Error validation and helpers
   const isStepValid = () => {
     switch (step.key) {
       case "displayName":
@@ -296,8 +294,8 @@ const OnboardingSteps = () => {
     if (stepIdx <= 0) return navigate("/onboarding");
     navigate(`/onboarding/step/${stepIdx - 1}`);
   };
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const goToNextStep = () => {
     setError(null);
     if (!isStepValid()) {
       setError("Please complete this step.");
@@ -307,13 +305,20 @@ const OnboardingSteps = () => {
       navigate(`/onboarding/step/${stepIdx + 1}`);
     }
   };
-  const handleFinish = async (e: React.FormEvent) => {
+
+  // Now, handle submission only from form
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!isStepValid()) {
       setError("Please complete this step.");
       return;
     }
+    if (stepIdx < STEPS.length - 1) {
+      goToNextStep();
+      return;
+    }
+    // Last step: save profile and redirect
     await saveProfile({
       display_name: displayName,
       bio,
@@ -335,7 +340,7 @@ const OnboardingSteps = () => {
           <CardTitle className="text-center text-3xl font-bold tracking-tight mb-4">{step.label}</CardTitle>
         </CardHeader>
         <CardContent style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 0, paddingBottom: 32 }}>
-          <form onSubmit={stepIdx < STEPS.length - 1 ? handleNext : handleFinish} className="flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col">
             <ProgressCircles currentStep={stepIdx} />
             <StepContent step={step} state={state} setState={state} />
             {error && (
@@ -347,7 +352,7 @@ const OnboardingSteps = () => {
               stepIndex={stepIdx}
               totalSteps={STEPS.length}
               onBack={handleBack}
-              onNext={handleNext}
+              onNext={goToNextStep}
               isLast={stepIdx === STEPS.length - 1}
               disabled={!isStepValid()}
             />
