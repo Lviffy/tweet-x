@@ -5,7 +5,7 @@ import { useTweetGeneration } from '@/hooks/useTweetGeneration';
 
 export const useTweetGeneratorSession = () => {
   const { sessionId } = useParams();
-  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(undefined);
   
   const { 
     isGenerating, 
@@ -18,23 +18,25 @@ export const useTweetGeneratorSession = () => {
     setGeneratedTweets 
   } = useTweetGeneration();
 
-  // Load session only once when component mounts with sessionId
+  // Load session when sessionId changes
   useEffect(() => {
-    if (sessionId && !sessionLoaded && !isLoadingSession) {
-      console.log('Loading session:', sessionId);
-      loadSession(sessionId).then(() => {
-        setSessionLoaded(true);
-      });
-    } else if (!sessionId && !sessionLoaded) {
+    console.log('Session ID changed:', sessionId, 'Current:', currentSessionId);
+    
+    if (sessionId && sessionId !== currentSessionId && !isLoadingSession) {
+      console.log('Loading new session:', sessionId);
+      setCurrentSessionId(sessionId);
+      loadSession(sessionId);
+    } else if (!sessionId && currentSessionId) {
       // Clear session for new sessions
+      console.log('Clearing session - new session detected');
+      setCurrentSessionId(undefined);
       clearSession();
-      setSessionLoaded(true);
     }
-  }, [sessionId, sessionLoaded, isLoadingSession, loadSession, clearSession]);
+  }, [sessionId, currentSessionId, isLoadingSession, loadSession, clearSession]);
 
   return {
     sessionId,
-    sessionLoaded,
+    sessionLoaded: currentSessionId === sessionId,
     isGenerating,
     generatedTweets,
     sessionParams,
