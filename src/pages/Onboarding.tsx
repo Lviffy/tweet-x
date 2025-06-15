@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingProgressBar } from "@/components/onboarding/OnboardingProgressBar";
 import { OnboardingStepContent } from "@/components/onboarding/OnboardingStepContent";
@@ -67,6 +69,28 @@ const STEP_DESCRIPTIONS: Record<string, string> = {
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Not logged in, redirect to auth
+      console.log("[WELCOME] No user, redirecting to /auth");
+      navigate("/auth", { replace: true });
+      return;
+    }
+    if (!loading && user && !profileLoading && profile) {
+      // User finished onboarding, redirect to main app
+      console.log("[WELCOME] User already has profile, redirecting to /tweet-generator");
+      navigate("/tweet-generator", { replace: true });
+    }
+  }, [user, loading, profile, profileLoading, navigate]);
+
+  // While auth loads, just show nothing.
+  if (loading || profileLoading) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-background via-background to-gray-900/20">
       <Card className="w-full max-w-md shadow-lg bg-background/90 border-white/10">
@@ -106,6 +130,29 @@ const StepScreen = ({
   handleNext: () => void, handleBack: () => void, handleFinish: () => void, 
   error: string | null, setError: (err: string | null) => void
 }) => {
+  const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Not logged in, redirect to auth
+      console.log("[STEP] No user, redirecting to /auth");
+      navigate("/auth", { replace: true });
+      return;
+    }
+    if (!loading && user && !profileLoading && profile) {
+      // User finished onboarding, redirect to main app
+      console.log("[STEP] User already has profile, redirecting to /tweet-generator");
+      navigate("/tweet-generator", { replace: true });
+    }
+  }, [user, loading, profile, profileLoading, navigate]);
+
+  // While auth loads, just show nothing.
+  if (loading || profileLoading) {
+    return null;
+  }
+
   const showBack = stepIndex > 0;
   const isLast = stepIndex === totalSteps - 1;
 
@@ -163,13 +210,25 @@ const StepScreen = ({
 };
 
 const OnboardingRouter = () => {
-  const { profile, loading, saveProfile } = useUserProfile();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading, saveProfile } = useUserProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { stepIndex } = useParams<{ stepIndex: string }>();
   const location = useLocation();
 
-  // All onboarding state
+  // Auth guard: if not authenticated, redirect to /auth
+  useEffect(() => {
+    if (!authLoading && !user) {
+      console.log("[ROUTER] No user, redirecting to /auth");
+      navigate("/auth", { replace: true });
+    }
+    if (!authLoading && user && !profileLoading && profile) {
+      console.log("[ROUTER] User already has profile, redirecting to /tweet-generator");
+      navigate("/tweet-generator", { replace: true });
+    }
+  }, [user, authLoading, profile, profileLoading, navigate]);
+
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [industry, setIndustry] = useState("");
@@ -186,14 +245,6 @@ const OnboardingRouter = () => {
       setInterests(profile.interests ? profile.interests.split(",") : []);
     }
   }, [profile]);
-
-  // 🚩 ADD REDIRECT if profile exists:
-  useEffect(() => {
-    if (!loading && profile) {
-      // Existing profile: get user out of onboarding
-      navigate("/tweet-generator", { replace: true });
-    }
-  }, [loading, profile, navigate]);
 
   const state = {
     displayName, setDisplayName,
@@ -271,12 +322,9 @@ const OnboardingRouter = () => {
     navigate("/tweet-generator"); // Redirect to tweet generator after onboarding
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white" />
-      </div>
-    );
+  // While loading authentication/profile, render nothing
+  if (authLoading || profileLoading) {
+    return null;
   }
 
   if (!stepIndex) return <Navigate to="/onboarding" replace />;
