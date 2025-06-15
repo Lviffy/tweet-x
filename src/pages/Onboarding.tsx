@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Navigate, Routes, Route } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -219,10 +219,10 @@ const ProgressCircles = ({
   </div>
 );
 
-// Main onboarding page
+// Main onboarding page (only pure UI / onboarding logic)
+// No navigation, no redirects here
 const OnboardingSteps = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, saveProfile } = useUserProfile();
+  const { profile } = useUserProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { stepIndex: rawStepIdx } = useParams<{ stepIndex: string }>();
@@ -246,30 +246,10 @@ const OnboardingSteps = () => {
     }
   }, [profile]);
 
-  // Central guards: Prevent infinite redirects by checking pathname and redirect requirements precisely
-  useEffect(() => {
-    if (!authLoading && !user) {
-      // Not logged in -> go to auth
-      navigate("/auth", { replace: true });
-      return;
-    }
-    if (!profileLoading && user && profile) {
-      // Already onboarded -> redirect to main
-      navigate("/tweet-generator", { replace: true });
-      return;
-    }
-    // Otherwise: logged in, not onboarded => stay on current
-    // No redirect!
-  }, [user, authLoading, profile, profileLoading, navigate]);
-
-  if (authLoading || profileLoading) return null;
-  if (!user) return null;
-  if (profile) return null;
-
-  const stepIdx = Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
-  const step = STEPS[stepIdx];
-
-  // NO redundant redirect check here!
+  const stepIdx = Number.isNaN(Number(rawStepIdx))
+    ? 0
+    : Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
+  const step = STEPS[stepIdx] || STEPS[0];
 
   const state = {
     displayName, setDisplayName,
@@ -298,7 +278,7 @@ const OnboardingSteps = () => {
   // NAVIGATION
   const handleBack = () => {
     setError(null);
-    if (stepIdx <= 0) return navigate("/onboarding");
+    if (stepIdx <= 0) return navigate("/onboarding/step/0", { replace: true });
     navigate(`/onboarding/step/${stepIdx - 1}`);
   };
 
@@ -314,6 +294,7 @@ const OnboardingSteps = () => {
   };
 
   // Now, handle submission only from form
+  const { saveProfile } = useUserProfile();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -404,16 +385,28 @@ const OnboardingRoot = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    // Auth still loading: wait.
+    if (authLoading || profileLoading) return;
+    // If not logged in, redirect to auth
+    if (!user) {
       navigate("/auth", { replace: true });
-    } else if (!profileLoading && user && profile) {
+    } else if (user && profile) {
+      // If logged in and onboarded, redirect to generator
       navigate("/tweet-generator", { replace: true });
-    } else if (!profileLoading && user && !profile) {
-      navigate("/onboarding/step/0", { replace: true });
     }
-  }, [user, profile, authLoading, profileLoading, navigate]);
+    // If logged in and no profile, don't redirect—let the user continue onboarding
+  }, [user, authLoading, profile, profileLoading, navigate]);
 
   // Only render fallback, never visible UI
+  // Show loading spinner while checks are ongoing
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-20 w-20 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  // Otherwise, null—success paths handled by router below.
   return null;
 };
 
