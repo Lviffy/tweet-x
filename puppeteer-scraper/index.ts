@@ -145,7 +145,9 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
         '--window-size=1920x1080',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
       ]
     };
 
@@ -168,27 +170,130 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
 
     console.log('Page loaded, waiting for content...');
 
-    // Wait for content to load
+    // Wait for content to load and scroll to load more tweets
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Scroll down to load more tweets
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight / 2);
+    });
+    
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Get some tweets with error handling
-    const tweets = await page.$$eval('div[data-testid="tweetText"] span', spans => 
-      spans.map(span => span.innerText).filter(Boolean)
-    ).catch(() => {
-      console.log('Could not find tweet text elements, trying alternative selector');
-      return [];
-    });
+    // Multiple selectors to try for tweets (X/Twitter changes these frequently)
+    const tweetSelectors = [
+      'div[data-testid="tweetText"]',
+      'div[data-testid="tweetText"] span',
+      'article[data-testid="tweet"] div[lang]',
+      'article div[data-testid="tweetText"]',
+      '[data-testid="tweet"] [lang] span',
+      'article [data-testid="tweetText"] span'
+    ];
 
-    console.log(`Found ${tweets.length} tweets`);
-
-    // Get profile display name and bio with error handling
-    const displayName = await page.$eval('div[data-testid="UserName"] span', el => el.innerText)
-      .catch(() => handle);
+    let tweets: string[] = [];
     
-    const bio = await page.$eval('div[data-testid="UserDescription"] span', el => el.innerText)
-      .catch(() => '');
+    // Try each selector until we find tweets
+    for (const selector of tweetSelectors) {
+      try {
+        console.log(`Trying selector: ${selector}`);
+        
+        const elements = await page.$$(selector);
+        console.log(`Found ${elements.length} elements with selector: ${selector}`);
+        
+        if (elements.length > 0) {
+          const tweetTexts = await page.$$eval(selector, els => 
+            els.map(el => el.textContent?.trim()).filter(text => text && text.length > 10)
+          );
+          
+          if (tweetTexts.length > 0) {
+            tweets = tweetTexts as string[];
+            console.log(`Successfully extracted ${tweets.length} tweets using selector: ${selector}`);
+            break;
+          }
+        }
+      } catch (error) {
+        console.log(`Selector ${selector} failed:`, error);
+        continue;
+      }
+    }
 
-    console.log(`Profile info - Name: ${displayName}, Bio: ${bio ? 'Found' : 'Not found'}`);
+    // If no tweets found with specific selectors, try a broader approach
+    if (tweets.length === 0) {
+      console.log('No tweets found with specific selectors, trying broader approach...');
+      
+      try {
+        // Look for any text content in article elements
+        const articleTexts = await page.$$eval('article', articles => 
+          articles.map(article => {
+            // Find text elements that might be tweets
+            const textElements = article.querySelectorAll('div[lang], span[lang], div[dir="auto"]');
+            const texts = Array.from(textElements)
+              .map(el => el.textContent?.trim())
+              .filter(text => text && text.length > 20 && text.length < 500)
+              .filter(text => !text.includes('Show this thread') && !text.includes('Replying to'));
+            
+            return texts;
+          }).flat()
+        );
+        
+        tweets = articleTexts.filter((text, index, arr) => 
+          text && arr.indexOf(text) === index // Remove duplicates
+        ).slice(0, 10);
+        
+        console.log(`Broader approach found ${tweets.length} potential tweets`);
+      } catch (error) {
+        console.log('Broader approach failed:', error);
+      }
+    }
+
+    console.log(`Final tweet count: ${tweets.length}`);
+    console.log('Tweet samples:', tweets.slice(0, 2));
+
+    // Get profile info with multiple selectors
+    let displayName = handle;
+    let bio = '';
+
+    // Try different selectors for display name
+    const nameSelectors = [
+      'div[data-testid="UserName"] span',
+      'h2[data-testid="UserName"] span',
+      '[data-testid="UserName"] div span',
+      'h1 span'
+    ];
+
+    for (const selector of nameSelectors) {
+      try {
+        const name = await page.$eval(selector, el => el.textContent?.trim());
+        if (name && name.length > 0) {
+          displayName = name;
+          console.log(`Found display name: ${displayName} using selector: ${selector}`);
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+
+    // Try different selectors for bio
+    const bioSelectors = [
+      'div[data-testid="UserDescription"] span',
+      '[data-testid="UserDescription"]',
+      'div[dir="auto"] span',
+      'div[data-testid="UserDescription"] div'
+    ];
+
+    for (const selector of bioSelectors) {
+      try {
+        const bioText = await page.$eval(selector, el => el.textContent?.trim());
+        if (bioText && bioText.length > 0) {
+          bio = bioText;
+          console.log(`Found bio: ${bio.substring(0, 50)}... using selector: ${selector}`);
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
 
     await browser.close();
     browser = null;
@@ -205,7 +310,7 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
       tweets: (tweets || []).slice(0, 8).map((text, i) => ({
         text,
         length: text.length,
-        isThread: text.startsWith('1/') || text.includes('🧵'),
+        isThread: text.startsWith('1/') || text.includes('🧵') || text.includes('Thread'),
         hasEmojis: /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(text),
         hashtags: (text.match(/#\w+/g) || []),
         timestamp: new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -218,6 +323,8 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
     };
 
     console.log('Scraping completed successfully');
+    console.log(`Result summary: ${result.tweets.length} tweets found for ${result.profile.displayName}`);
+    
     return res.json(result);
 
   } catch (error: any) {
