@@ -266,6 +266,12 @@ const OnboardingSteps = () => {
   const stepIdx = Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
   const step = STEPS[stepIdx];
 
+  // If invalid step, redirect to beginning to avoid undefined step
+  if (!step) {
+    navigate("/onboarding/step/0", { replace: true });
+    return null;
+  }
+
   const state = {
     displayName, setDisplayName,
     bio, setBio,
