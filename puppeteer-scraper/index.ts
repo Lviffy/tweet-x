@@ -5,6 +5,8 @@
 import express, { Request, Response } from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 // Optional: add API Key protection for production
 const API_KEY = process.env.PUPPETEER_API_KEY || null;
@@ -13,21 +15,82 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Function to find Chrome executable
+function findChromeExecutable(): string | undefined {
+  const possiblePaths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/home/pptruser/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+  ];
+
+  console.log('Searching for Chrome executable...');
+  
+  for (const path of possiblePaths) {
+    if (path && existsSync(path)) {
+      console.log(`Found Chrome at: ${path}`);
+      return path;
+    } else if (path) {
+      console.log(`Chrome not found at: ${path}`);
+    }
+  }
+
+  // Try to find Chrome in puppeteer cache with glob pattern
+  try {
+    const puppeteerCache = '/home/pptruser/.cache/puppeteer';
+    if (existsSync(puppeteerCache)) {
+      console.log(`Puppeteer cache contents: ${require('fs').readdirSync(puppeteerCache)}`);
+      
+      // Look for chrome directory
+      const chromeDir = join(puppeteerCache, 'chrome');
+      if (existsSync(chromeDir)) {
+        const chromeDirs = require('fs').readdirSync(chromeDir);
+        console.log(`Chrome directories: ${chromeDirs}`);
+        
+        for (const dir of chromeDirs) {
+          const chromePath = join(chromeDir, dir, 'chrome-linux64', 'chrome');
+          if (existsSync(chromePath)) {
+            console.log(`Found Chrome executable at: ${chromePath}`);
+            return chromePath;
+          }
+          
+          const chromePathAlt = join(chromeDir, dir, 'chrome-linux', 'chrome');
+          if (existsSync(chromePathAlt)) {
+            console.log(`Found Chrome executable at: ${chromePathAlt}`);
+            return chromePathAlt;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error searching for Chrome:', error);
+  }
+
+  console.log('No Chrome executable found');
+  return undefined;
+}
+
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {
+  const chromeExecutable = findChromeExecutable();
   res.json({ 
     status: 'healthy', 
     service: 'puppeteer-scraper',
     timestamp: new Date().toISOString(),
+    chromeExecutable: chromeExecutable || 'not found',
     endpoints: ['/scrape-twitter-profile', '/health']
   });
 });
 
 app.get('/health', (req: Request, res: Response) => {
+  const chromeExecutable = findChromeExecutable();
   res.json({ 
     status: 'healthy',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    chromeExecutable: chromeExecutable || 'not found'
   });
 });
 
@@ -50,8 +113,12 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
 
     const url = `https://x.com/${handle.replace('@', '')}`;
     
-    // Configure Puppeteer for Render deployment
-    browser = await puppeteer.launch({
+    // Find Chrome executable
+    const chromeExecutable = findChromeExecutable();
+    console.log('Using Chrome executable:', chromeExecutable);
+
+    // Configure Puppeteer for deployment
+    const launchOptions: any = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -59,11 +126,21 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--window-size=1920x1080'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    });
+        '--window-size=1920x1080',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ]
+    };
 
+    // Set executable path if found
+    if (chromeExecutable) {
+      launchOptions.executablePath = chromeExecutable;
+    }
+
+    console.log('Launch options:', JSON.stringify(launchOptions, null, 2));
+
+    browser = await puppeteer.launch(launchOptions);
     console.log('Browser launched successfully');
 
     const page = await browser.newPage();
@@ -159,4 +236,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('  GET  / - Service status');
   console.log('  GET  /health - Health check');
   console.log('  POST /scrape-twitter-profile - Scrape Twitter profile');
+  
+  // Log Chrome detection on startup
+  const chromeExecutable = findChromeExecutable();
+  console.log('Chrome executable detected:', chromeExecutable || 'NONE FOUND');
 });

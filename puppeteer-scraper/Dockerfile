@@ -38,22 +38,26 @@ COPY . .
 # Build the TypeScript code
 RUN npm run build
 
-# Install Chrome browsers using Puppeteer with explicit version
-RUN npx puppeteer browsers install chrome@stable
-
-# Verify Chrome installation
-RUN ls -la /home/pptruser/.cache/puppeteer/
-
 # Now remove dev dependencies to keep image size down
 RUN npm prune --production
 
-# The pptruser already exists in the base image, so we just need to set permissions
+# Create directories and set permissions for pptruser BEFORE switching users
 RUN mkdir -p /home/pptruser/Downloads \
+    && mkdir -p /home/pptruser/.cache/puppeteer \
     && chown -R pptruser:pptruser /home/pptruser \
     && chown -R pptruser:pptruser /app
 
-# Switch to non-root user
+# Switch to non-root user BEFORE installing Chrome
 USER pptruser
+
+# Install Chrome browsers using Puppeteer as pptruser so it goes to the right location
+RUN npx puppeteer browsers install chrome@stable
+
+# Verify Chrome installation in the correct location
+RUN ls -la /home/pptruser/.cache/puppeteer/
+
+# Set environment variable for Chrome executable path
+ENV PUPPETEER_EXECUTABLE_PATH=/home/pptruser/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome
 
 # Expose the port your app runs on
 EXPOSE 3000
