@@ -1,4 +1,3 @@
-
 import { useNavigate, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -38,14 +37,7 @@ export const TweetGeneratorSidebar = () => {
             New Session
           </Button>
 
-          <Button
-            variant={isStarPage ? "secondary" : "ghost"}
-            className="w-full flex items-center justify-start"
-            onClick={() => navigate("/starred-tweets")}
-          >
-            <Star className="w-4 h-4 mr-2" />
-            Starred Tweets
-          </Button>
+          {/* Removed Starred Tweets button from here, handled in SidebarNavigation */}
 
           <SidebarNavigation />
           <SidebarSessionList />
