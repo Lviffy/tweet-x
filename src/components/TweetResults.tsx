@@ -50,16 +50,10 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   return (
     <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
-      <div className="relative flex-1">
+      {/* Parent scrollable container */}
+      <div className="relative flex-1 min-h-0">
         <div
-          className="
-            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
-            max-h-[80vh]
-            overflow-y-auto
-            rounded-lg
-            bg-transparent
-          "
+          className="flex-1 min-h-0 h-full pr-4"
         >
           {tweets.length === 0 ? (
             <Card className="bg-background/80 backdrop-blur-sm border-white/10">
@@ -70,7 +64,7 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
               </CardContent>
             </Card>
           ) : (
-            <ScrollArea className="h-full pr-4">
+            <ScrollArea className="h-full">
               <div className="space-y-6">
                 {/* Single Tweets Section */}
                 {singleTweets.length > 0 && (
