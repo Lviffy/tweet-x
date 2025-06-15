@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,22 +49,21 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="space-y-4 flex flex-col flex-1 min-h-0 h-full">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fills all available space */}
-      <div className="relative flex-1 flex flex-col min-h-0">
-        <div className="flex-1 min-h-0 overflow-y-auto rounded-lg bg-transparent">
-          {tweets.length === 0 ? (
-            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Your generated tweets will appear here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ScrollArea className="h-full pr-4">
-              <div className="space-y-6">
+      <div className="relative flex-1 min-h-0 h-full">
+        <ScrollArea className="flex-1 min-h-0 h-full pr-4">
+          <div className="space-y-6">
+            {tweets.length === 0 ? (
+              <Card className="bg-background/80 backdrop-blur-sm border-white/10">
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Your generated tweets will appear here
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
                 {/* Single Tweets Section */}
                 {singleTweets.length > 0 && (
                   <div className="space-y-4">
@@ -80,6 +80,7 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
                     </div>
                   </div>
                 )}
+
                 {/* Thread Tweets Section */}
                 {threadVariations.length > 0 && (
                   <div className="space-y-4">
@@ -90,13 +91,14 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
                     />
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
 };
 
 export default TweetResults;
+
