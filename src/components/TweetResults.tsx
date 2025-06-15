@@ -49,30 +49,21 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4 flex flex-col flex-1 min-h-0 h-full">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
-      <div className="relative flex-1">
-        <div
-          className="
-            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
-            max-h-[80vh]
-            overflow-y-auto
-            rounded-lg
-            bg-transparent
-          "
-        >
-          {tweets.length === 0 ? (
-            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Your generated tweets will appear here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ScrollArea className="h-full pr-4">
-              <div className="space-y-6">
+      <div className="relative flex-1 min-h-0 h-full">
+        <ScrollArea className="flex-1 min-h-0 h-full pr-4">
+          <div className="space-y-6">
+            {tweets.length === 0 ? (
+              <Card className="bg-background/80 backdrop-blur-sm border-white/10">
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Your generated tweets will appear here
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
                 {/* Single Tweets Section */}
                 {singleTweets.length > 0 && (
                   <div className="space-y-4">
@@ -100,10 +91,10 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
                     />
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
