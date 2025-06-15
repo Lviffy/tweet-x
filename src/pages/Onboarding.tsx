@@ -227,6 +227,25 @@ const OnboardingSteps = () => {
   const navigate = useNavigate();
   const { stepIndex: rawStepIdx } = useParams<{ stepIndex: string }>();
 
+  // State hooks for each step
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [goals, setGoals] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // If we want to load pre-vetted data for "edit"
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || "");
+      setBio(profile.bio || "");
+      setIndustry(profile.industry || "");
+      setGoals(profile.goals ? profile.goals.split(",") : []);
+      setInterests(profile.interests ? profile.interests.split(",") : []);
+    }
+  }, [profile]);
+
   // Central guards
   useEffect(() => {
     // Not logged in? => redirect to auth.
@@ -243,27 +262,9 @@ const OnboardingSteps = () => {
   if (authLoading || profileLoading) return null;
   if (!user) return null;
   if (profile) return null;
+
   const stepIdx = Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
   const step = STEPS[stepIdx];
-
-  // State hooks for each step, could be moved to hook if desired.
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [goals, setGoals] = useState<string[]>([]);
-  const [interests, setInterests] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  // If we ever want to load pre-vetted data for "edit", do:
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name || "");
-      setBio(profile.bio || "");
-      setIndustry(profile.industry || "");
-      setGoals(profile.goals ? profile.goals.split(",") : []);
-      setInterests(profile.interests ? profile.interests.split(",") : []);
-    }
-  }, [profile]);
 
   const state = {
     displayName, setDisplayName,
