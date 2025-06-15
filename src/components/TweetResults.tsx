@@ -48,16 +48,14 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-[90vh] flex flex-col">
+    <div className="space-y-4 h-full flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
       {/* Parent scrollable container */}
       <div className="relative flex-1 flex flex-col min-h-0">
         <div
           className="
-            flex flex-col h-full min-h-0
+            flex flex-col flex-1 min-h-0
             max-h-full
-            overflow-y-visible
-            rounded-lg
             bg-transparent
           "
         >
@@ -70,7 +68,7 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
               </CardContent>
             </Card>
           ) : (
-            <ScrollArea className="h-full pr-4">
+            <ScrollArea className="h-full flex-1 min-h-0 pr-4">
               <div className="space-y-6">
                 {/* Single Tweets Section */}
                 {singleTweets.length > 0 && (
