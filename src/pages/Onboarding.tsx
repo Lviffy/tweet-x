@@ -187,6 +187,14 @@ const OnboardingRouter = () => {
     }
   }, [profile]);
 
+  // 🚩 ADD REDIRECT if profile exists:
+  useEffect(() => {
+    if (!loading && profile) {
+      // Existing profile: get user out of onboarding
+      navigate("/tweet-generator", { replace: true });
+    }
+  }, [loading, profile, navigate]);
+
   const state = {
     displayName, setDisplayName,
     bio, setBio,
