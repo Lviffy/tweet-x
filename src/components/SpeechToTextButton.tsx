@@ -17,12 +17,14 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
   });
 
   React.useEffect(() => {
+    console.log('Transcript updated:', transcript);
     if (transcript) {
       onTranscriptChange(transcript);
     }
   }, [transcript, onTranscriptChange]);
 
   const handleToggleListening = () => {
+    console.log('Button clicked, isListening:', isListening);
     if (isListening) {
       stopListening();
     } else {
@@ -42,7 +44,7 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
         title="Speech recognition not supported in this browser"
       >
         <Mic className="w-4 h-4 mr-2" />
-        Speak
+        Speak (Not Supported)
       </Button>
     );
   }
