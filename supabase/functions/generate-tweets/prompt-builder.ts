@@ -45,6 +45,18 @@ export function createDetailedPrompt(params: TweetGenerationRequest): string {
     prompt += `- Each tweet should offer unique value\n`;
   }
 
+  // Content restrictions - explicitly state what NOT to include
+  prompt += `\nCONTENT RESTRICTIONS:\n`;
+  if (!includeHashtags) {
+    prompt += `- DO NOT include any hashtags in the tweets\n`;
+  }
+  if (!includeEmojis) {
+    prompt += `- DO NOT use any emojis in the tweets\n`;
+  }
+  if (!includeCTA) {
+    prompt += `- DO NOT include calls-to-action or engagement prompts\n`;
+  }
+
   // Only include additional options if they are actually selected
   const enabledOptions: string[] = [];
   if (includeHashtags) enabledOptions.push("Include 2-3 relevant hashtags");
@@ -61,6 +73,7 @@ export function createDetailedPrompt(params: TweetGenerationRequest): string {
   prompt += `- Stay within Twitter's 280 character limit per tweet\n`;
   prompt += `- Follow the ${length} length guidelines strictly\n`;
   prompt += `- Make content immediately engaging and shareable\n`;
+  prompt += `- Follow ALL content restrictions above\n`;
   prompt += `- NO additional commentary or explanations\n\n`;
 
   prompt += `Begin now with the numbered ${format.includes('thread') ? 'threads' : 'tweets'}:`;
