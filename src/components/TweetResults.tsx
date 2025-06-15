@@ -48,27 +48,29 @@ const TweetResults = ({ tweets, onCopyToClipboard }: TweetResultsProps) => {
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4 h-[90vh] flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
-      {/* Parent scrollable container */}
-      <div className="relative flex-1 flex flex-col min-h-0">
+      {/* Parent scrollable container: fixed height for desktop, smaller on mobile */}
+      <div className="relative flex-1">
         <div
           className="
-            flex flex-col flex-1 min-h-0
-            max-h-full
+            h-[60vh] md:h-[70vh] lg:h-[75vh] 2xl:h-[80vh]
+            max-h-[80vh]
+            overflow-y-auto
+            rounded-lg
             bg-transparent
           "
         >
           {tweets.length === 0 ? (
-            <Card className="bg-background/80 backdrop-blur-sm border-white/10 h-full flex items-center">
-              <CardContent className="py-12 text-center w-full">
+            <Card className="bg-background/80 backdrop-blur-sm border-white/10">
+              <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
                   Your generated tweets will appear here
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <ScrollArea className="h-full flex-1 min-h-0 pr-4">
+            <ScrollArea className="h-full pr-4">
               <div className="space-y-6">
                 {/* Single Tweets Section */}
                 {singleTweets.length > 0 && (
