@@ -1,3 +1,4 @@
+
 import React from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +24,8 @@ const TweetGenerator = () => {
     generatedTweets,
     sessionParams,
     isLoadingSession,
-    generateTweets
+    generateTweets,
+    regenerateTweets
   } = useTweetGeneratorSession();
 
   const {
@@ -93,6 +95,31 @@ const TweetGenerator = () => {
     }
   };
 
+  const handleRegenerate = async () => {
+    console.log('Regenerating tweets with params:', {
+      topic: topic.trim(),
+      tone,
+      format,
+      tweetCount,
+      length,
+      includeHashtags,
+      includeEmojis,
+      includeCTA
+    });
+
+    await regenerateTweets({
+      handles: [], // No longer using handles
+      topic: topic.trim(),
+      tone,
+      format,
+      tweetCount,
+      length,
+      includeHashtags,
+      includeEmojis,
+      includeCTA
+    });
+  };
+
   const copyToClipboard = (content: string) => {
     navigator.clipboard.writeText(content);
     toast({
@@ -156,7 +183,7 @@ const TweetGenerator = () => {
                     onIncludeEmojisChange={setIncludeEmojis}
                     onIncludeCTAChange={setIncludeCTA}
                     onGenerate={handleGenerate}
-                    onRegenerate={handleGenerate}
+                    onRegenerate={handleRegenerate}
                   />
                 </div>
 

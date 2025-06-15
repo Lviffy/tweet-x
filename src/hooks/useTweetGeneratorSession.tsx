@@ -34,6 +34,14 @@ export const useTweetGeneratorSession = () => {
     }
   }, [sessionId, currentSessionId, isLoadingSession, loadSession, clearSession]);
 
+  const handleGenerate = async (params: any) => {
+    return await generateTweets(params, false);
+  };
+
+  const handleRegenerate = async (params: any) => {
+    return await generateTweets(params, true);
+  };
+
   return {
     sessionId,
     sessionLoaded: currentSessionId === sessionId,
@@ -41,7 +49,8 @@ export const useTweetGeneratorSession = () => {
     generatedTweets,
     sessionParams,
     isLoadingSession,
-    generateTweets,
+    generateTweets: handleGenerate,
+    regenerateTweets: handleRegenerate,
     setGeneratedTweets
   };
 };

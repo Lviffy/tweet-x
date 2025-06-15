@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ export const useTweetGeneration = () => {
   const [generatedTweets, setGeneratedTweets] = useState<GeneratedTweet[]>([]);
   const [sessionParams, setSessionParams] = useState<TweetGenerationParams | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -50,7 +52,7 @@ export const useTweetGeneration = () => {
     throw lastError;
   };
 
-  const generateTweets = async (params: TweetGenerationParams) => {
+  const generateTweets = async (params: TweetGenerationParams, isRegeneration = false) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -74,30 +76,76 @@ export const useTweetGeneration = () => {
     setIsGenerating(true);
     
     try {
-      // Create a new session with form parameters using retry logic
-      const { data: sessionData, error: sessionError } = await retryOperation(async () => {
-        return await supabase
-          .from('tweet_sessions')
-          .insert([{
-            user_id: user.id,
-            title: `${topic.substring(0, 30)} - ${new Date().toLocaleDateString()}`,
-            handles: handles,
-            topic: topic,
-            tone: tone,
-            format: format,
-            tweet_count: tweetCount,
-            length: length,
-            include_hashtags: includeHashtags,
-            include_emojis: includeEmojis,
-            include_cta: includeCTA
-          }])
-          .select()
-          .single();
-      });
+      let sessionData;
+      
+      if (isRegeneration && currentSessionId) {
+        // For regeneration, use existing session and delete old tweets
+        console.log('Regenerating tweets for existing session:', currentSessionId);
+        
+        // Delete existing tweets from the session
+        await retryOperation(async () => {
+          return await supabase
+            .from('generated_tweets')
+            .delete()
+            .eq('session_id', currentSessionId);
+        });
+        
+        // Update session with new parameters
+        const { data: updatedSession, error: updateError } = await retryOperation(async () => {
+          return await supabase
+            .from('tweet_sessions')
+            .update({
+              handles: handles,
+              topic: topic,
+              tone: tone,
+              format: format,
+              tweet_count: tweetCount,
+              length: length,
+              include_hashtags: includeHashtags,
+              include_emojis: includeEmojis,
+              include_cta: includeCTA,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', currentSessionId)
+            .select()
+            .single();
+        });
 
-      if (sessionError) {
-        console.error('Error creating session:', sessionError);
-        throw sessionError;
+        if (updateError) {
+          console.error('Error updating session:', updateError);
+          throw updateError;
+        }
+        
+        sessionData = updatedSession;
+      } else {
+        // Create a new session for initial generation
+        const { data: newSessionData, error: sessionError } = await retryOperation(async () => {
+          return await supabase
+            .from('tweet_sessions')
+            .insert([{
+              user_id: user.id,
+              title: `${topic.substring(0, 30)} - ${new Date().toLocaleDateString()}`,
+              handles: handles,
+              topic: topic,
+              tone: tone,
+              format: format,
+              tweet_count: tweetCount,
+              length: length,
+              include_hashtags: includeHashtags,
+              include_emojis: includeEmojis,
+              include_cta: includeCTA
+            }])
+            .select()
+            .single();
+        });
+
+        if (sessionError) {
+          console.error('Error creating session:', sessionError);
+          throw sessionError;
+        }
+        
+        sessionData = newSessionData;
+        setCurrentSessionId(sessionData.id);
       }
 
       // Call the Gemini AI Edge Function with retry logic
@@ -146,19 +194,20 @@ export const useTweetGeneration = () => {
         throw tweetsError;
       }
 
-      const generatedTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
+      const newGeneratedTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
         id: tweet.id,
         content: tweet.content,
         type: tweet.type as 'single' | 'thread'
       }));
 
-      setGeneratedTweets(generatedTweets);
+      setGeneratedTweets(newGeneratedTweets);
       setSessionParams(params);
       
       const mimicMessage = handles.length > 0 ? ` mimicking @${handles.join(', @')}` : '';
+      const actionMessage = isRegeneration ? 'Regenerated' : 'Generated';
       toast({
-        title: "Tweets Generated!",
-        description: `${generatedTweets.length} AI-generated tweets are ready${mimicMessage}.`
+        title: `Tweets ${actionMessage}!`,
+        description: `${newGeneratedTweets.length} AI-generated tweets are ready${mimicMessage}.`
       });
 
       return sessionData.id;
@@ -209,6 +258,9 @@ export const useTweetGeneration = () => {
         });
         return null;
       }
+
+      // Set current session ID
+      setCurrentSessionId(sessionData.id);
 
       // Load tweets for the session with retry logic
       const { data: tweetsData, error: tweetsError } = await retryOperation(async () => {
@@ -266,6 +318,7 @@ export const useTweetGeneration = () => {
     console.log('Clearing session data');
     setGeneratedTweets([]);
     setSessionParams(null);
+    setCurrentSessionId(null);
   };
 
   return {
