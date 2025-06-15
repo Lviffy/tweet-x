@@ -30,7 +30,8 @@ export const useUserProfile = () => {
       .select("*")
       .eq("id", user.id)
       .single()
-      .then(({ data }) => setProfile(data))
+      .then(({ data }) => setProfile(data as UserProfile))
+      .catch(() => setProfile(null))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -41,7 +42,29 @@ export const useUserProfile = () => {
     await supabase.from("user_profiles").upsert([
       { id: user.id, ...formData, updated_at: new Date().toISOString() },
     ]);
-    setProfile(prev => ({ ...(prev || { id: user.id }), ...formData }));
+    setProfile(prev => ({
+      id: user.id,
+      display_name:
+        formData.display_name !== undefined
+          ? formData.display_name
+          : prev?.display_name ?? null,
+      bio:
+        formData.bio !== undefined
+          ? formData.bio
+          : prev?.bio ?? null,
+      industry:
+        formData.industry !== undefined
+          ? formData.industry
+          : prev?.industry ?? null,
+      goals:
+        formData.goals !== undefined
+          ? formData.goals
+          : prev?.goals ?? null,
+      interests:
+        formData.interests !== undefined
+          ? formData.interests
+          : prev?.interests ?? null,
+    }));
     setLoading(false);
   };
 

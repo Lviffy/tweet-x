@@ -7,6 +7,42 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+const INDUSTRY_OPTIONS = [
+  "SaaS",
+  "Education",
+  "Healthcare",
+  "Marketing",
+  "AI/ML",
+  "E-commerce",
+  "Finance",
+  "Technology",
+  "Other",
+];
+
+const GOALS_OPTIONS = [
+  "Grow my personal brand",
+  "Find customers",
+  "Connect with experts",
+  "Share what I'm learning",
+  "Get hired",
+  "Network with peers",
+  "Other",
+];
+
+const INTERESTS_OPTIONS = [
+  "AI",
+  "Startups",
+  "Marketing",
+  "Tech news",
+  "Personal development",
+  "Productivity",
+  "Finance",
+  "Design",
+  "Other",
+];
 
 const Onboarding = () => {
   const { profile, loading, saveProfile } = useUserProfile();
@@ -86,31 +122,41 @@ const Onboarding = () => {
               />
             </div>
             <div>
-              <label htmlFor="industry" className="block ml-1 mb-1 font-medium">Industry</label>
-              <Input
-                id="industry"
-                value={industry}
-                onChange={e => setIndustry(e.target.value)}
-                placeholder="e.g., SaaS, Education, Healthcare"
-              />
+              <label className="block ml-1 mb-1 font-medium">Industry</label>
+              <Select value={industry} onValueChange={setIndustry}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label htmlFor="goals" className="block ml-1 mb-1 font-medium">What are your goals on Twitter?</label>
-              <Textarea
-                id="goals"
-                value={goals}
-                onChange={e => setGoals(e.target.value)}
-                rows={2}
-              />
+              <label className="block ml-1 mb-1 font-medium">Goals on Twitter</label>
+              <RadioGroup value={goals} onValueChange={setGoals} className="gap-2">
+                {GOALS_OPTIONS.map(option => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={option} />
+                    <label htmlFor={option} className="text-sm">{option}</label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
             <div>
-              <label htmlFor="interests" className="block ml-1 mb-1 font-medium">Interests</label>
-              <Input
-                id="interests"
-                value={interests}
-                onChange={e => setInterests(e.target.value)}
-                placeholder="e.g., AI, Startup, Marketing"
-              />
+              <label className="block ml-1 mb-1 font-medium">Interests</label>
+              <Select value={interests} onValueChange={setInterests}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your main interest" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INTERESTS_OPTIONS.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button type="submit" className="w-full mt-2">
               Save & Continue
