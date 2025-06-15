@@ -1,6 +1,6 @@
 
 # Use an official Puppeteer base image that comes with Chrome pre-installed
-FROM ghcr.io/puppeteer/puppeteer:21.0.0
+FROM ghcr.io/puppeteer/puppeteer:23.0.0
 
 # Set the working directory
 WORKDIR /app
