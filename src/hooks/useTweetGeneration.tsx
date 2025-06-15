@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,12 +107,15 @@ export const useTweetGeneration = () => {
             })
             .eq('id', currentSessionId)
             .select()
-            .single();
+            .maybeSingle(); // <-- FIX: allow 0 rows without throwing
         });
 
         if (updateError) {
           console.error('Error updating session:', updateError);
           throw updateError;
+        }
+        if (!updatedSession) {
+          throw new Error('Regeneration failed: Session not found or not updated.');
         }
         
         sessionData = updatedSession;
