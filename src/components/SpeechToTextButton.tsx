@@ -18,7 +18,7 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
 
   React.useEffect(() => {
     console.log('Transcript updated:', transcript);
-    if (transcript) {
+    if (transcript && transcript.trim()) {
       onTranscriptChange(transcript);
     }
   }, [transcript, onTranscriptChange]);

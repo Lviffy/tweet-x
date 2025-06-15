@@ -17,6 +17,7 @@ export const createSpeechRecognition = (
   onEnd: () => void
 ) => {
   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    console.log('Speech Recognition not available');
     return null;
   }
 
@@ -36,23 +37,37 @@ export const createSpeechRecognition = (
   recognition.onresult = (event) => {
     console.log('Speech recognition result received');
     let finalTranscript = '';
+    let interimTranscript = '';
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
+      const transcript = result[0].transcript;
+      
       if (result.isFinal) {
-        finalTranscript += result[0].transcript;
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
       }
     }
 
-    if (finalTranscript) {
-      console.log('Final transcript:', finalTranscript);
-      onResult(finalTranscript);
+    // Use final transcript if available, otherwise use interim
+    const resultTranscript = finalTranscript || interimTranscript;
+    if (resultTranscript.trim()) {
+      console.log('Transcript result:', resultTranscript);
+      onResult(resultTranscript);
     }
   };
 
   recognition.onerror = (event) => {
     console.error('Speech recognition error:', event.error);
-    onError(event.error);
+    
+    // Handle network errors by falling back to MediaRecorder
+    if (event.error === 'network' || event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      console.log('Falling back to MediaRecorder due to error:', event.error);
+      onError('fallback');
+    } else {
+      onError(event.error);
+    }
   };
 
   recognition.onend = () => {
