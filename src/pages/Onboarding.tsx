@@ -244,6 +244,7 @@ const OnboardingSteps = () => {
   if (!user) return null;
   if (profile) return null;
   const stepIdx = Math.max(0, Math.min(STEPS.length - 1, parseInt(rawStepIdx ?? "0", 10)));
+  const step = STEPS[stepIdx];
 
   // State hooks for each step, could be moved to hook if desired.
   const [displayName, setDisplayName] = useState("");
