@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -69,27 +68,6 @@ const STEP_DESCRIPTIONS: Record<string, string> = {
 
 const Welcome = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      // Not logged in, redirect to auth
-      console.log("[WELCOME] No user, redirecting to /auth");
-      navigate("/auth", { replace: true });
-      return;
-    }
-    if (!loading && user && !profileLoading && profile) {
-      // User finished onboarding, redirect to main app
-      console.log("[WELCOME] User already has profile, redirecting to /tweet-generator");
-      navigate("/tweet-generator", { replace: true });
-    }
-  }, [user, loading, profile, profileLoading, navigate]);
-
-  // While auth loads, just show nothing.
-  if (loading || profileLoading) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-background via-background to-gray-900/20">
@@ -127,32 +105,9 @@ const StepScreen = ({
 }: {
   stepIndex: number, totalSteps: number,
   state: any, setState: any,
-  handleNext: () => void, handleBack: () => void, handleFinish: () => void, 
+  handleNext: () => void, handleBack: () => void, handleFinish: () => void,
   error: string | null, setError: (err: string | null) => void
 }) => {
-  const { user, loading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      // Not logged in, redirect to auth
-      console.log("[STEP] No user, redirecting to /auth");
-      navigate("/auth", { replace: true });
-      return;
-    }
-    if (!loading && user && !profileLoading && profile) {
-      // User finished onboarding, redirect to main app
-      console.log("[STEP] User already has profile, redirecting to /tweet-generator");
-      navigate("/tweet-generator", { replace: true });
-    }
-  }, [user, loading, profile, profileLoading, navigate]);
-
-  // While auth loads, just show nothing.
-  if (loading || profileLoading) {
-    return null;
-  }
-
   const showBack = stepIndex > 0;
   const isLast = stepIndex === totalSteps - 1;
 
@@ -215,20 +170,24 @@ const OnboardingRouter = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { stepIndex } = useParams<{ stepIndex: string }>();
-  const location = useLocation();
 
-  // Auth guard: if not authenticated, redirect to /auth
+  // Centralize all redirect logic:
   useEffect(() => {
     if (!authLoading && !user) {
-      console.log("[ROUTER] No user, redirecting to /auth");
+      // If not logged in, go to auth.
       navigate("/auth", { replace: true });
-    }
-    if (!authLoading && user && !profileLoading && profile) {
-      console.log("[ROUTER] User already has profile, redirecting to /tweet-generator");
+    } else if (!profileLoading && user && profile) {
+      // If user already completed onboarding, go to main app.
       navigate("/tweet-generator", { replace: true });
     }
   }, [user, authLoading, profile, profileLoading, navigate]);
 
+  // Prevent any onboarding UI from rendering for users who should not see it
+  if (authLoading || profileLoading) return null;
+  if (!user) return null;
+  if (profile) return null;
+
+  // Onboarding state setup
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [industry, setIndustry] = useState("");
@@ -322,13 +281,8 @@ const OnboardingRouter = () => {
     navigate("/tweet-generator"); // Redirect to tweet generator after onboarding
   };
 
-  // While loading authentication/profile, render nothing
-  if (authLoading || profileLoading) {
-    return null;
-  }
-
   if (!stepIndex) return <Navigate to="/onboarding" replace />;
-  
+
   return (
     <StepScreen
       stepIndex={currentStep}
@@ -346,10 +300,25 @@ const OnboardingRouter = () => {
 
 const Onboarding = () => (
   <Routes>
-    <Route path="/" element={<Welcome />} />
+    <Route path="/" element={<OnboardingRouterFallback />} />
     <Route path="/step/:stepIndex" element={<OnboardingRouter />} />
     <Route path="*" element={<Navigate to="/onboarding" />} />
   </Routes>
 );
+
+// Fallback router for /onboarding root: handles all user/profile logic centrally
+const OnboardingRouterFallback = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !user) navigate("/auth", { replace: true });
+    else if (!profileLoading && user && profile) navigate("/tweet-generator", { replace: true });
+    else if (!profileLoading && user && !profile) navigate("/onboarding/step/0", { replace: true });
+  }, [user, profile, authLoading, profileLoading, navigate]);
+
+  return null;
+};
 
 export default Onboarding;
