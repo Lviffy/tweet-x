@@ -13,6 +13,8 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 2;
   const { toast } = useToast();
 
   const {
@@ -45,10 +47,12 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
     recognition.continuous = continuous;
     recognition.interimResults = interimResults;
     recognition.lang = language;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       console.log('Speech recognition started');
       setIsListening(true);
+      retryCountRef.current = 0; // Reset retry count on successful start
     };
 
     recognition.onresult = (event) => {
@@ -65,6 +69,7 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       if (finalTranscript) {
         console.log('Final transcript:', finalTranscript);
         setTranscript(finalTranscript);
+        retryCountRef.current = 0; // Reset retry count on successful result
       }
     };
 
@@ -72,12 +77,36 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
       
-      // Handle different error types
+      // Handle different error types with retry logic
       switch (event.error) {
+        case 'network':
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++;
+            console.log(`Network error, retrying... (${retryCountRef.current}/${maxRetries})`);
+            
+            // Retry after a short delay
+            setTimeout(() => {
+              if (recognitionRef.current) {
+                try {
+                  recognitionRef.current.start();
+                } catch (error) {
+                  console.error('Error during retry:', error);
+                }
+              }
+            }, 1000);
+          } else {
+            toast({
+              title: "Network Connection Issue",
+              description: "Unable to connect to speech recognition service. Please check your internet connection and try again.",
+              variant: "destructive"
+            });
+            retryCountRef.current = 0;
+          }
+          break;
         case 'not-allowed':
           toast({
             title: "Microphone Access Denied",
-            description: "Please allow microphone access and try again.",
+            description: "Please allow microphone access in your browser settings and try again.",
             variant: "destructive"
           });
           break;
@@ -85,17 +114,10 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
           // Don't show error for no speech - just stop listening
           console.log('No speech detected');
           break;
-        case 'network':
-          toast({
-            title: "Network Error",
-            description: "Please check your internet connection and try again.",
-            variant: "destructive"
-          });
-          break;
         case 'service-not-allowed':
           toast({
-            title: "Service Not Available",
-            description: "Speech recognition service is not available. Try refreshing the page.",
+            title: "Service Unavailable",
+            description: "Speech recognition service is temporarily unavailable. Please try again later.",
             variant: "destructive"
           });
           break;
@@ -103,14 +125,21 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
         case 'language-not-supported':
           toast({
             title: "Language Not Supported",
-            description: "The selected language is not supported.",
+            description: "The selected language is not supported for speech recognition.",
+            variant: "destructive"
+          });
+          break;
+        case 'audio-capture':
+          toast({
+            title: "Microphone Error",
+            description: "Unable to access your microphone. Please check your device settings.",
             variant: "destructive"
           });
           break;
         default:
           toast({
             title: "Speech Recognition Error",
-            description: "An error occurred. Please try again.",
+            description: `An error occurred: ${event.error}. Please try again.`,
             variant: "destructive"
           });
       }
@@ -152,11 +181,21 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
     }
 
     try {
-      // Always create a fresh instance to avoid stale state
+      // Stop any existing recognition first
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.log('Error stopping previous recognition:', error);
+        }
+      }
+
+      // Create fresh instance
       recognitionRef.current = initializeSpeechRecognition();
 
       if (recognitionRef.current) {
         setTranscript('');
+        retryCountRef.current = 0;
         recognitionRef.current.start();
         console.log('Speech recognition start requested');
       }
@@ -173,6 +212,7 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
 
   const stopListening = useCallback(() => {
     console.log('Stopping speech recognition...');
+    retryCountRef.current = maxRetries; // Prevent retries when manually stopping
     if (recognitionRef.current && isListening) {
       try {
         recognitionRef.current.stop();
