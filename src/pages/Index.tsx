@@ -2,8 +2,15 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SparkleBackground from "@/components/SparkleBackground";
 import { useEffect } from "react";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const navigate = useNavigate();
+
   useEffect(() => {
     // Initialize Unicorn Studio when component mounts
     if (window.UnicornStudio) {
@@ -11,7 +18,11 @@ const Index = () => {
         console.error("Failed to initialize Unicorn Studio:", err);
       });
     }
-  }, []);
+    // Redirect to onboarding if user logged in but not onboarded
+    if (!loading && user && !profileLoading && !profile) {
+      navigate("/onboarding");
+    }
+  }, [user, loading, profile, profileLoading, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-gray-900/20 relative overflow-hidden">
