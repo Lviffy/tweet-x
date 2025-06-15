@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import TweetCard from "./TweetCard";
 import ThreadGroup from "./ThreadGroup";
 
@@ -52,7 +53,7 @@ const TweetResults = ({ tweets, isGenerating, onRegenerate, onCopyToClipboard }:
   const threadVariations = groupThreadsIntoVariations(threadTweets);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col">
       <h3 className="text-2xl font-semibold">Generated Tweets</h3>
       {tweets.length === 0 ? (
         <Card className="bg-background/80 backdrop-blur-sm border-white/10">
@@ -63,44 +64,52 @@ const TweetResults = ({ tweets, isGenerating, onRegenerate, onCopyToClipboard }:
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {/* Single Tweets Section */}
-          {singleTweets.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
-              <div className="space-y-4">
-                {singleTweets.map((tweet, index) => (
-                  <TweetCard
-                    key={tweet.id}
-                    tweet={tweet}
-                    index={index}
-                    onCopy={onCopyToClipboard}
+        <div className="flex flex-col h-full space-y-4">
+          {/* Scrollable variations container */}
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {/* Single Tweets Section */}
+              {singleTweets.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-muted-foreground">Single Tweets</h4>
+                  <div className="space-y-4">
+                    {singleTweets.map((tweet, index) => (
+                      <TweetCard
+                        key={tweet.id}
+                        tweet={tweet}
+                        index={index}
+                        onCopy={onCopyToClipboard}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Thread Tweets Section */}
+              {threadVariations.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
+                  <ThreadGroup 
+                    threads={threadVariations} 
+                    onCopy={onCopyToClipboard} 
                   />
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-          )}
+          </ScrollArea>
 
-          {/* Thread Tweets Section */}
-          {threadVariations.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="text-lg font-medium text-muted-foreground">Thread Variations</h4>
-              <ThreadGroup 
-                threads={threadVariations} 
-                onCopy={onCopyToClipboard} 
-              />
-            </div>
-          )}
-
-          <Button
-            variant="outline"
-            onClick={onRegenerate}
-            disabled={isGenerating}
-            className="w-full"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Regenerate
-          </Button>
+          {/* Regenerate button at bottom */}
+          <div className="pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={onRegenerate}
+              disabled={isGenerating}
+              className="w-full"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Regenerate
+            </Button>
+          </div>
         </div>
       )}
     </div>

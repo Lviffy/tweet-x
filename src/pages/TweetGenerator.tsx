@@ -124,46 +124,50 @@ const TweetGenerator = () => {
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-gray-900/20">
         <TweetGeneratorSidebar />
         
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto px-6 py-12">
+        <main className="flex-1 overflow-hidden">
+          <div className="container mx-auto px-6 py-12 h-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="max-w-6xl mx-auto"
+              className="max-w-6xl mx-auto h-full flex flex-col"
             >
               <TweetGeneratorHeader onHomeClick={navigateHome} />
 
-              <div className="grid lg:grid-cols-2 gap-8">
+              <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0">
                 {/* Input Form */}
-                <TweetForm
-                  topic={topic}
-                  tone={tone}
-                  format={format}
-                  tweetCount={tweetCount}
-                  length={length}
-                  includeHashtags={includeHashtags}
-                  includeEmojis={includeEmojis}
-                  includeCTA={includeCTA}
-                  isGenerating={isGenerating}
-                  onTopicChange={setTopic}
-                  onToneChange={setTone}
-                  onFormatChange={setFormat}
-                  onTweetCountChange={setTweetCount}
-                  onLengthChange={setLength}
-                  onIncludeHashtagsChange={setIncludeHashtags}
-                  onIncludeEmojisChange={setIncludeEmojis}
-                  onIncludeCTAChange={setIncludeCTA}
-                  onGenerate={handleGenerate}
-                />
+                <div className="flex flex-col">
+                  <TweetForm
+                    topic={topic}
+                    tone={tone}
+                    format={format}
+                    tweetCount={tweetCount}
+                    length={length}
+                    includeHashtags={includeHashtags}
+                    includeEmojis={includeEmojis}
+                    includeCTA={includeCTA}
+                    isGenerating={isGenerating}
+                    onTopicChange={setTopic}
+                    onToneChange={setTone}
+                    onFormatChange={setFormat}
+                    onTweetCountChange={setTweetCount}
+                    onLengthChange={setLength}
+                    onIncludeHashtagsChange={setIncludeHashtags}
+                    onIncludeEmojisChange={setIncludeEmojis}
+                    onIncludeCTAChange={setIncludeCTA}
+                    onGenerate={handleGenerate}
+                  />
+                </div>
 
                 {/* Results */}
-                <TweetResults
-                  tweets={generatedTweets}
-                  isGenerating={isGenerating}
-                  onRegenerate={handleGenerate}
-                  onCopyToClipboard={copyToClipboard}
-                />
+                <div className="flex flex-col min-h-0">
+                  <TweetResults
+                    tweets={generatedTweets}
+                    isGenerating={isGenerating}
+                    onRegenerate={handleGenerate}
+                    onCopyToClipboard={copyToClipboard}
+                  />
+                </div>
               </div>
             </motion.div>
           </div>
