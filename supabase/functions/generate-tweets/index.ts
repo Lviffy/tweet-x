@@ -2,7 +2,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { authenticateUser } from './auth.ts';
-import { getDetailedProfileAnalysis } from './profile-analyzer.ts';
 import { createDetailedPrompt } from './prompt-builder.ts';
 import { callGeminiAI } from './ai-service.ts';
 import { parseTweets } from './tweet-parser.ts';
@@ -21,7 +20,6 @@ serve(async (req) => {
   try {
     const requestData: TweetGenerationRequest = await req.json();
     const { 
-      handles, 
       topic, 
       tone, 
       format, 
@@ -32,7 +30,6 @@ serve(async (req) => {
     } = requestData;
 
     console.log('Generate tweets request:', { 
-      handles: handles?.length || 0, 
       topic: topic?.substring(0, 50) + '...', 
       tone, 
       format, 
@@ -53,21 +50,16 @@ serve(async (req) => {
     // Authenticate user
     const authHeader = req.headers.get('authorization');
     const { user, supabase } = await authenticateUser(authHeader);
-
-    // Fetch profile analysis (handles can be empty array)
-    const profileData = await getDetailedProfileAnalysis(supabase, user.id, handles || []);
     
-    // Generate AI prompt
+    // Generate AI prompt without profile data
     const prompt = createDetailedPrompt({
-      handles: handles || [],
       topic,
       tone,
       format: format || 'single',
       tweetCount,
       includeHashtags: includeHashtags || false,
       includeEmojis: includeEmojis || false,
-      includeCTA: includeCTA || false,
-      profileData
+      includeCTA: includeCTA || false
     });
 
     console.log('AI prompt created, calling Gemini...');

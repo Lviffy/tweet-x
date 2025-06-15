@@ -7,10 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wand2, RefreshCw } from "lucide-react";
-import ProfileSelector from "./ProfileSelector";
 
 interface TweetFormProps {
-  handles: string[];
   topic: string;
   tone: string;
   format: string;
@@ -19,7 +17,6 @@ interface TweetFormProps {
   includeEmojis: boolean;
   includeCTA: boolean;
   isGenerating: boolean;
-  onHandlesChange: (handles: string[]) => void;
   onTopicChange: (topic: string) => void;
   onToneChange: (tone: string) => void;
   onFormatChange: (format: string) => void;
@@ -31,7 +28,6 @@ interface TweetFormProps {
 }
 
 const TweetForm = ({
-  handles,
   topic,
   tone,
   format,
@@ -40,7 +36,6 @@ const TweetForm = ({
   includeEmojis,
   includeCTA,
   isGenerating,
-  onHandlesChange,
   onTopicChange,
   onToneChange,
   onFormatChange,
@@ -81,13 +76,6 @@ const TweetForm = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Profile Selector - replaces manual handle inputs */}
-        <ProfileSelector
-          selectedProfiles={handles}
-          onProfilesChange={onHandlesChange}
-          maxProfiles={3}
-        />
-
         {/* Topic */}
         <div className="space-y-2">
           <Label htmlFor="topic">Topic/Prompt *</Label>

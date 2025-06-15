@@ -37,7 +37,6 @@ const TweetGenerator = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { user, loading } = useAuth();
-  const [handles, setHandles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('');
   const [format, setFormat] = useState('single');
@@ -77,7 +76,6 @@ const TweetGenerator = () => {
   useEffect(() => {
     if (sessionParams) {
       console.log('Updating form with session params:', sessionParams);
-      setHandles(sessionParams.handles || []);
       setTopic(sessionParams.topic || '');
       setTone(sessionParams.tone || '');
       setFormat(sessionParams.format || 'single');
@@ -121,7 +119,6 @@ const TweetGenerator = () => {
     }
 
     console.log('Generating tweets with params:', {
-      handles,
       topic: topic.trim(),
       tone,
       format,
@@ -132,7 +129,7 @@ const TweetGenerator = () => {
     });
 
     const newSessionId = await generateTweets({
-      handles: handles.length > 0 ? handles : [],
+      handles: [], // No longer using handles
       topic: topic.trim(),
       tone,
       format,
@@ -206,7 +203,6 @@ const TweetGenerator = () => {
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Input Form */}
                 <TweetForm
-                  handles={handles}
                   topic={topic}
                   tone={tone}
                   format={format}
@@ -215,7 +211,6 @@ const TweetGenerator = () => {
                   includeEmojis={includeEmojis}
                   includeCTA={includeCTA}
                   isGenerating={isGenerating}
-                  onHandlesChange={setHandles}
                   onTopicChange={setTopic}
                   onToneChange={setTone}
                   onFormatChange={setFormat}

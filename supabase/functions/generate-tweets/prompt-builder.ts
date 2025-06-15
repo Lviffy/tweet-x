@@ -1,42 +1,13 @@
 
-import { TweetGenerationRequest, ProfileData } from './types.ts';
+import { TweetGenerationRequest } from './types.ts';
 
-export function createDetailedPrompt(params: TweetGenerationRequest & { profileData: ProfileData[] }): string {
-  const { handles, topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA, profileData } = params;
+export function createDetailedPrompt(params: TweetGenerationRequest): string {
+  const { topic, tone, format, tweetCount, includeHashtags, includeEmojis, includeCTA } = params;
   
   let prompt = `You are an expert Twitter content creator. Generate EXACTLY ${tweetCount} ${format.includes('thread') ? 'complete thread variations' : 'individual tweets'} about: "${topic}"\n\n`;
 
   // Add tone context
   prompt += `TONE: ${tone} - Write in this specific style and voice.\n\n`;
-
-  // Handle profile-specific writing style analysis
-  if (profileData && profileData.length > 0) {
-    prompt += `WRITING STYLE TO MIMIC:\n`;
-    
-    profileData.forEach((profile: ProfileData) => {
-      prompt += `\n@${profile.handle} Analysis:\n`;
-      
-      if (profile.bio) {
-        prompt += `- Bio: "${profile.bio}"\n`;
-      }
-      
-      if (profile.common_phrases && profile.common_phrases.length > 0) {
-        prompt += `- Key phrases to use: ${profile.common_phrases.slice(0, 5).join(', ')}\n`;
-      }
-      
-      if (profile.topic_areas && profile.topic_areas.length > 0) {
-        prompt += `- Main topics: ${profile.topic_areas.slice(0, 3).join(', ')}\n`;
-      }
-      
-      prompt += `- Average length: ${profile.average_tweet_length || 150} characters\n`;
-      prompt += `- Emoji usage: ${profile.emoji_usage || 20}%\n`;
-    });
-    
-    prompt += `\nSTYLE RULES:\n`;
-    prompt += `- Use the signature phrases naturally\n`;
-    prompt += `- Match the character length patterns\n`;
-    prompt += `- Copy the tone and rhythm of their writing\n`;
-  }
 
   // Format-specific instructions
   if (format.includes('thread')) {
