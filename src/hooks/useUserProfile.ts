@@ -25,20 +25,29 @@ export const useUserProfile = () => {
       return;
     }
     setLoading(true);
-    supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => setProfile(data as UserProfile))
-      .catch(() => setProfile(null))
-      .finally(() => setLoading(false));
+
+    // Use an async function for better error handling
+    const fetchProfile = async () => {
+      try {
+        const { data } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        setProfile(data as UserProfile);
+      } catch (error) {
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
   const saveProfile = async (formData: Partial<UserProfile>) => {
     if (!user) return;
     setLoading(true);
-    // Upsert user profile (insert if not exists)
     await supabase.from("user_profiles").upsert([
       { id: user.id, ...formData, updated_at: new Date().toISOString() },
     ]);
@@ -70,3 +79,4 @@ export const useUserProfile = () => {
 
   return { profile, loading: loading || authLoading, saveProfile };
 };
+
