@@ -13,15 +13,38 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Health check endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({ 
+    status: 'healthy', 
+    service: 'puppeteer-scraper',
+    timestamp: new Date().toISOString(),
+    endpoints: ['/scrape-twitter-profile', '/health']
+  });
+});
+
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
   let browser;
   try {
+    console.log('API Key check:', API_KEY ? 'Set' : 'Not set');
+    console.log('Request headers:', req.headers);
+    
     if (API_KEY && req.headers['x-api-key'] !== API_KEY) {
       return res.status(401).json({ error: 'Unauthorized (missing or invalid API key)' });
     }
 
     const { handle } = req.body;
-    if (!handle) return res.status(400).json({ error: 'handle is required' });
+    if (!handle) {
+      return res.status(400).json({ error: 'handle is required' });
+    }
 
     console.log(`Starting scrape for handle: ${handle}`);
 
@@ -57,7 +80,7 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
 
     console.log('Page loaded, waiting for content...');
 
-    // Wait for content to load - using setTimeout instead of waitForTimeout
+    // Wait for content to load
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Get some tweets with error handling
@@ -111,6 +134,7 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Puppeteer scraping error:', error.message);
+    console.error('Stack trace:', error.stack);
     
     // Clean up browser if it exists
     if (browser) {
@@ -128,24 +152,11 @@ app.post('/scrape-twitter-profile', async (req: Request, res: Response) => {
   }
 });
 
-// Health check endpoint
-app.get('/', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'healthy', 
-    service: 'puppeteer-scraper',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'healthy',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
-});
-
 const PORT = process.env.PORT || 3030;
-app.listen(PORT, () => {
-  console.log(`Puppeteer Scraper API running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Puppeteer Scraper API running on http://0.0.0.0:${PORT}`);
+  console.log('Available endpoints:');
+  console.log('  GET  / - Service status');
+  console.log('  GET  /health - Health check');
+  console.log('  POST /scrape-twitter-profile - Scrape Twitter profile');
 });

@@ -15,6 +15,19 @@ async function fetchPuppeteerProfile(handle: string): Promise<any> {
 
   console.log('Calling Puppeteer API at:', `${apiUrl}/scrape-twitter-profile`);
 
+  // First, let's check if the service is healthy
+  try {
+    console.log('Checking service health...');
+    const healthResponse = await fetch(`${apiUrl}/health`);
+    console.log('Health check status:', healthResponse.status);
+    if (healthResponse.ok) {
+      const healthData = await healthResponse.text();
+      console.log('Health check response:', healthData);
+    }
+  } catch (healthError) {
+    console.error('Health check failed:', healthError);
+  }
+
   const response = await fetch(`${apiUrl}/scrape-twitter-profile`, {
     method: 'POST',
     headers: {
@@ -24,10 +37,13 @@ async function fetchPuppeteerProfile(handle: string): Promise<any> {
     body: JSON.stringify({ handle }),
   });
   
+  console.log('Puppeteer API response status:', response.status);
+  console.log('Puppeteer API response headers:', Object.fromEntries(response.headers.entries()));
+  
   if (!response.ok) {
     const errText = await response.text();
     console.error('Puppeteer API response:', response.status, errText);
-    throw new Error(`Puppeteer API failed: ${errText}`);
+    throw new Error(`Puppeteer API failed: ${response.status} - ${errText}`);
   }
   
   return await response.json();
