@@ -1,4 +1,3 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -160,9 +159,10 @@ const TweetGenerator = () => {
             >
               <TweetGeneratorHeader onHomeClick={navigateHome} />
 
-              <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0">
-                {/* Input Form */}
-                <div className="flex flex-col">
+              {/* Main content grid */}
+              <div className="grid lg:grid-cols-2 gap-8 flex-1 min-h-0 h-full">
+                {/* Input Form (Left Column) */}
+                <div className="flex flex-col h-full">
                   <TweetForm
                     topic={topic}
                     tone={tone}
@@ -187,8 +187,8 @@ const TweetGenerator = () => {
                   />
                 </div>
 
-                {/* Results */}
-                <div className="flex flex-col min-h-0">
+                {/* Results (Right Column) */}
+                <div className="flex flex-col min-h-0 h-full">
                   <TweetResults
                     tweets={generatedTweets}
                     onCopyToClipboard={copyToClipboard}
