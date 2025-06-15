@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Wifi, WifiOff } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 interface SpeechToTextButtonProps {
@@ -32,7 +32,10 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
     }
   };
 
-  // Show a disabled button if not supported, so users know the feature exists
+  // Check if we're on a secure connection
+  const isSecure = location.protocol === 'https:' || location.hostname === 'localhost';
+
+  // Show different states based on support and connection
   if (!isSupported) {
     return (
       <Button
@@ -44,7 +47,23 @@ const SpeechToTextButton = ({ onTranscriptChange, className }: SpeechToTextButto
         title="Speech recognition not supported in this browser"
       >
         <Mic className="w-4 h-4 mr-2" />
-        Speak (Not Supported)
+        Speech Not Supported
+      </Button>
+    );
+  }
+
+  if (!isSecure) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className={className}
+        title="Speech recognition requires HTTPS"
+      >
+        <WifiOff className="w-4 h-4 mr-2" />
+        HTTPS Required
       </Button>
     );
   }

@@ -72,24 +72,47 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
       
-      if (event.error === 'not-allowed') {
-        toast({
-          title: "Microphone Access Denied",
-          description: "Please allow microphone access to use speech-to-text.",
-          variant: "destructive"
-        });
-      } else if (event.error === 'no-speech') {
-        toast({
-          title: "No Speech Detected",
-          description: "Please try speaking again.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Speech Recognition Error",
-          description: `Error: ${event.error}. Please try again.`,
-          variant: "destructive"
-        });
+      // Handle different error types
+      switch (event.error) {
+        case 'not-allowed':
+          toast({
+            title: "Microphone Access Denied",
+            description: "Please allow microphone access and try again.",
+            variant: "destructive"
+          });
+          break;
+        case 'no-speech':
+          // Don't show error for no speech - just stop listening
+          console.log('No speech detected');
+          break;
+        case 'network':
+          toast({
+            title: "Network Error",
+            description: "Please check your internet connection and try again.",
+            variant: "destructive"
+          });
+          break;
+        case 'service-not-allowed':
+          toast({
+            title: "Service Not Available",
+            description: "Speech recognition service is not available. Try refreshing the page.",
+            variant: "destructive"
+          });
+          break;
+        case 'bad-grammar':
+        case 'language-not-supported':
+          toast({
+            title: "Language Not Supported",
+            description: "The selected language is not supported.",
+            variant: "destructive"
+          });
+          break;
+        default:
+          toast({
+            title: "Speech Recognition Error",
+            description: "An error occurred. Please try again.",
+            variant: "destructive"
+          });
       }
     };
 
@@ -105,7 +128,11 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
     console.log('Attempting to start listening...');
     
     if (!isSupported) {
-      console.log('Speech recognition not supported');
+      toast({
+        title: "Not Supported",
+        description: "Speech recognition is not supported in this browser.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -114,10 +141,19 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       return;
     }
 
+    // Check if we're on HTTPS or localhost (required for speech recognition)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      toast({
+        title: "HTTPS Required",
+        description: "Speech recognition requires a secure connection (HTTPS).",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      if (!recognitionRef.current) {
-        recognitionRef.current = initializeSpeechRecognition();
-      }
+      // Always create a fresh instance to avoid stale state
+      recognitionRef.current = initializeSpeechRecognition();
 
       if (recognitionRef.current) {
         setTranscript('');
@@ -126,8 +162,9 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
       }
     } catch (error) {
       console.error('Error starting speech recognition:', error);
+      setIsListening(false);
       toast({
-        title: "Speech Recognition Error",
+        title: "Unable to Start",
         description: "Failed to start speech recognition. Please try again.",
         variant: "destructive"
       });
@@ -137,12 +174,30 @@ export const useSpeechToText = (options: SpeechToTextOptions = {}) => {
   const stopListening = useCallback(() => {
     console.log('Stopping speech recognition...');
     if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping speech recognition:', error);
+        setIsListening(false);
+      }
     }
   }, [isListening]);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error('Error cleaning up speech recognition:', error);
+        }
+      }
+    };
   }, []);
 
   return {
