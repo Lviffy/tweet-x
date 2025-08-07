@@ -29,14 +29,23 @@ const TweetCard = ({ tweet, index, onCopy, onStarToggle }: TweetCardProps) => {
     const newStarred = !starred;
     setStarred(newStarred);
     try {
+      console.log('Updating tweet starred status:', { tweetId: tweet.id, starred: newStarred });
       // update local, then db
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('generated_tweets')
         .update({ starred: newStarred })
-        .eq('id', tweet.id);
-      if (error) throw error;
+        .eq('id', tweet.id)
+        .select();
+      
+      if (error) {
+        console.error('Error updating tweet starred status:', error);
+        throw error;
+      }
+      
+      console.log('Successfully updated tweet starred status:', data);
       if (onStarToggle) onStarToggle(tweet.id, newStarred);
     } catch (e) {
+      console.error('Failed to update tweet starred status:', e);
       setStarred(!newStarred); // revert on fail
     }
     setSaving(false);

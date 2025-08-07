@@ -44,6 +44,9 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
     const isAnyUnstarred = threadTweets.some((t) => !(starredMap[t.id] ?? t.starred));
     const newStarState = isAnyUnstarred; // true if ANY are unstarred
     const ids = threadTweets.map((t) => t.id);
+    
+    console.log('Updating thread starred status:', { tweetIds: ids, starred: newStarState });
+    
     // Optimistic update
     setStarredMap((prev) => {
       const m = { ...prev };
@@ -52,11 +55,20 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
     });
     try {
       // Update all at once
-      await supabase
+      const { data, error } = await supabase
         .from("generated_tweets")
         .update({ starred: newStarState })
-        .in("id", ids);
+        .in("id", ids)
+        .select();
+      
+      if (error) {
+        console.error('Error updating thread starred status:', error);
+        throw error;
+      }
+      
+      console.log('Successfully updated thread starred status:', data);
     } catch (e) {
+      console.error('Failed to update thread starred status:', e);
       // Revert all if fail
       setStarredMap((prev) => {
         const m = { ...prev };
@@ -67,10 +79,23 @@ const ThreadGroup = ({ threads, onCopy }: ThreadGroupProps) => {
   };
 
   const singleTweetStarToggle = async (tweetId: string, currentVal: boolean) => {
+    console.log('Updating single tweet starred status:', { tweetId, starred: !currentVal });
     setStarredMap((m) => ({ ...m, [tweetId]: !currentVal }));
     try {
-      await supabase.from("generated_tweets").update({ starred: !currentVal }).eq("id", tweetId);
+      const { data, error } = await supabase
+        .from("generated_tweets")
+        .update({ starred: !currentVal })
+        .eq("id", tweetId)
+        .select();
+      
+      if (error) {
+        console.error('Error updating single tweet starred status:', error);
+        throw error;
+      }
+      
+      console.log('Successfully updated single tweet starred status:', data);
     } catch (e) {
+      console.error('Failed to update single tweet starred status:', e);
       setStarredMap((m) => ({ ...m, [tweetId]: currentVal })); // revert
     }
   };
