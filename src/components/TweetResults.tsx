@@ -9,6 +9,7 @@ interface GeneratedTweet {
   id: string;
   content: string;
   type: 'single' | 'thread';
+  starred?: boolean;
 }
 
 interface TweetResultsProps {

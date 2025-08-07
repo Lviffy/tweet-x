@@ -7,6 +7,7 @@ interface GeneratedTweet {
   id: string;
   content: string;
   type: 'single' | 'thread';
+  starred?: boolean;
 }
 
 interface TweetGenerationParams {
@@ -199,7 +200,8 @@ export const useTweetGeneration = () => {
       const newGeneratedTweets: GeneratedTweet[] = tweetsData.map(tweet => ({
         id: tweet.id,
         content: tweet.content,
-        type: tweet.type as 'single' | 'thread'
+        type: tweet.type as 'single' | 'thread',
+        starred: tweet.starred || false
       }));
 
       setGeneratedTweets(newGeneratedTweets);
@@ -281,7 +283,8 @@ export const useTweetGeneration = () => {
       const tweets: GeneratedTweet[] = tweetsData?.map(tweet => ({
         id: tweet.id,
         content: tweet.content,
-        type: tweet.type as 'single' | 'thread'
+        type: tweet.type as 'single' | 'thread',
+        starred: tweet.starred || false
       })) || [];
 
       // Extract session parameters

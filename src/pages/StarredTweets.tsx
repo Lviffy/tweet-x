@@ -57,6 +57,39 @@ const StarredTweetsPage = () => {
     });
   };
 
+  const handleUnstar = async (tweetId: string) => {
+    try {
+      const { error } = await supabase
+        .from("generated_tweets")
+        .update({ starred: false })
+        .eq("id", tweetId);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to unstar tweet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove the tweet from the local state
+      setTweets(tweets.filter(tweet => tweet.id !== tweetId));
+      
+      toast({
+        title: "Tweet unstarred",
+        description: "Tweet has been removed from your starred tweets.",
+      });
+    } catch (error) {
+      console.error('Error unstarring tweet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unstar tweet.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <div className="flex items-center mb-6">
@@ -92,8 +125,8 @@ const StarredTweetsPage = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled
-                        aria-label="Starred"
+                        onClick={() => handleUnstar(tweet.id)}
+                        aria-label="Unstar tweet"
                       >
                         <Star
                           className="w-4 h-4 text-yellow-400"
